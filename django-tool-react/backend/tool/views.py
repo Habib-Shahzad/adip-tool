@@ -6,6 +6,8 @@ import cv2
 import numpy as np 
 import json
 import base64
+from .clahe import main_CLAHE
+
 
 
 def threshold_image(image):
@@ -32,7 +34,7 @@ def draw_image_contours_using_opencv(image):
     return image_copy
 
 @csrf_exempt 
-def sample_view(request):
+def basic_tools_view(request):
     f = request.FILES['upload']
     myfile = f.read()
     image = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_COLOR)
@@ -49,4 +51,22 @@ def sample_view(request):
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
     return JsonResponse(jstr, safe=False)
+
+
+@csrf_exempt 
+def underwater_tools_view(request):
+    f = request.FILES['upload']
+    myfile = f.read()
+    image = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_COLOR)
+
+    radioValue = int(request.POST['radioValue'])
+    if radioValue == 1:
+        image = main_CLAHE(image)
+    elif radioValue == 2:
+        image = main_CLAHE(image)
+
+    _, imdata = cv2.imencode('.JPG', image)
+    jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
+    return JsonResponse(jstr, safe=False)
+
 
