@@ -54,6 +54,15 @@ function App() {
             </Nav.Link>
 
             <Nav.Link
+              key={'/fourier-transform'}
+              as={NavLink}
+              to={'/fourier-transform'}
+              end
+            >
+              {'Fourier Transform'}
+            </Nav.Link>
+
+            <Nav.Link
               key={'/about'}
               as={NavLink}
               to={'/about'}

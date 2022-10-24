@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { Home, About, BasicTools, UnderWaterTools } from './pages';
+import { Home, About, BasicTools, UnderWaterTools, FourierTransformTools } from './pages';
 
 
 const routes = [
@@ -29,6 +29,15 @@ const routes = [
         element: <UnderWaterTools />,
         nodeRef: createRef()
     },
+
+
+    {
+        path: '/fourier-transform',
+        name: 'fourier transform',
+        element: <FourierTransformTools />,
+        nodeRef: createRef()
+    },
+
 
     {
         path: '*',

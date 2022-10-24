@@ -1,5 +1,6 @@
 # from django.shortcuts import render
 # from rest_framework import viewsets
+
 from django.http import JsonResponse 
 from django.views.decorators.csrf import csrf_exempt
 import cv2
@@ -7,7 +8,7 @@ import numpy as np
 import json
 import base64
 from .clahe import main_CLAHE
-
+from .labcc import main_LabCC
 
 
 def threshold_image(image):
@@ -43,9 +44,6 @@ def basic_tools_view(request):
     if radioValue == 1:
         image = draw_image_contours_using_opencv(image)
     elif radioValue == 2:
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    elif radioValue == 3:
         image = cv2.blur(image, (5, 5))
 
     _, imdata = cv2.imencode('.JPG', image)
@@ -63,7 +61,8 @@ def underwater_tools_view(request):
     if radioValue == 1:
         image = main_CLAHE(image)
     elif radioValue == 2:
-        image = main_CLAHE(image)
+        image = main_LabCC(image)
+
 
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})

@@ -1,3 +1,6 @@
 .image-preview-container {
     border: 1px solid #ddd;
 }
+.fancy-text-container {
+  padding-top: 10rem;
+} 

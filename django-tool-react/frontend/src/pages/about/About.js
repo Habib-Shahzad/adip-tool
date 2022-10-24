@@ -1,4 +1,5 @@
 import React from 'react';
+import { BouncyText } from '../../components';
 import './About.css';
 
 function About() {
@@ -8,10 +9,13 @@ function About() {
             <div className='margin-global-top-2' />
             <h1>Developers</h1>
             <div className='about-text-container'>
-                <h1 className='bouncy-text'>Habib Shahzad</h1>
-                {/* <div className='margin-global-top-2' /> */}
-                <div className='margin-global-top-2' />
-                <h1 className='bouncy-text'>Akeel Ather Medina</h1>
+                <BouncyText
+                    text='Habib Shahzad'
+                />
+                <BouncyText
+                    classes='margin-top'
+                    text="Akeel Ather Medina"
+                />
             </div>
         </div>
     )
