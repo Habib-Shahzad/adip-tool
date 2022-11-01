@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import axios from "axios";
-import { Row, Col, Container, ToggleButton, ButtonGroup, Button } from "react-bootstrap";
+import { Row, Col, Container, ToggleButton, ButtonGroup, Button, Spinner } from "react-bootstrap";
 import './UnderWaterTools.css';
 import { BouncyText } from "../../components";
 
@@ -99,6 +99,7 @@ const UnderWaterTools = () => {
                     }
 
 
+
                     <div className="margin-global-top-2" />
 
                     <Row >
@@ -120,6 +121,8 @@ const UnderWaterTools = () => {
 
                             {
                                 fileUrl &&
+
+
                                 <Button
                                     style={{ marginLeft: '2rem' }}
                                     disabled={loading}
@@ -129,6 +132,9 @@ const UnderWaterTools = () => {
                                 >
                                     Make Changes
                                 </Button>
+
+
+
                             }
 
 
@@ -139,6 +145,26 @@ const UnderWaterTools = () => {
 
                                 </>
                             }
+
+
+
+                            <div
+                                style={{ color: 'white', marginTop: '2rem' }}
+                                className="justify-content-center align-items-center"
+                            >
+                                <Spinner
+                                    animation="border"
+                                    role="status"
+                                    style={{
+                                        width: "4rem",
+                                        height: "4rem",
+                                        display: loading ? "block" : "none"
+                                    }}
+                                >
+                                </Spinner>
+
+                            </div>
+
 
                         </Col>
                     </Row>
@@ -153,6 +179,8 @@ const UnderWaterTools = () => {
                         <BouncyText text="Enhancement" />
                     </div>
                 </Col>
+
+
 
             </Row>
 

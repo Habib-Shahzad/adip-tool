@@ -16,14 +16,13 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework import routers
 from tool import views
-
-router = routers.DefaultRouter()
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
     path('api/basic-tools/', views.basic_tools_view),
     path('api/underwater-tools/', views.underwater_tools_view),
+    path('api/fft/', views.compute_fft),
+    path('api/inv-fft/', views.compute_inv_fft),
+
 ]

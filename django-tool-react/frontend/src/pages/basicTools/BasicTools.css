@@ -1,6 +1,11 @@
 .image-preview-container {
-    border: 1px solid #ddd;
+  border: 0.5px solid white;
+  border-radius: 20px;
+  padding: 7px;
+  width: 30rem;
 }
 .fancy-text-container {
-  padding-top: 10rem;
-} 
+  padding-top: 2rem;
+  font-size: 0.5rem !important;
+}
+
