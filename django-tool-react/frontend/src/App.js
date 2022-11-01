@@ -46,6 +46,18 @@ function App() {
                 {'Basic Tools'}
               </Nav.Link>
 
+
+
+              <Nav.Link
+                key={'/fun-with-brush'}
+                as={NavLink}
+                to={'/fun-with-brush'}
+                end
+              >
+                {'Fun With Brush'}
+              </Nav.Link>
+
+
               <Nav.Link
                 key={'/underwater-tools'}
                 as={NavLink}

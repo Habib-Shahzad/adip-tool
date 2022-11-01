@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { Row, Col, Container, ToggleButton, ButtonGroup, Button, Spinner, Form } from "react-bootstrap";
-import './UnderWaterTools.css';
+import './FunWithBrush.css';
 import { useOpenCv } from "../../lib/useOpenCv";
 import { BouncyText } from "../../components";
 
@@ -11,7 +11,7 @@ const APP_URL = "http://localhost:8000";
 // const APP_URL = "https://adip-tool.herokuapp.com";
 
 
-const UnderWaterTools = () => {
+const FunWithBrush = () => {
 
     const { loaded, cv } = useOpenCv();
 
@@ -61,12 +61,6 @@ const UnderWaterTools = () => {
 
     }
 
-    const [radioValue, setRadioValue] = useState('1');
-
-    const radios = [
-        { name: 'CLHE', value: '1' },
-        { name: 'Lab Color Correction', value: '2' },
-    ];
 
     function dataURLtoFile(dataurl, filename) {
         var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
@@ -79,7 +73,6 @@ const UnderWaterTools = () => {
 
     const makeChanges = async () => {
 
-        setLoading(true);
         var formData = new FormData();
 
         var myInputImage = document.getElementById('fileInput').files[0];
@@ -89,9 +82,8 @@ const UnderWaterTools = () => {
 
         formData.append("upload", dataURLtoFile(hiddenCanvas.toDataURL(), "image.png"));
         formData.append("input", myInputImage);
-        formData.append("radioValue", radioValue);
 
-        var response = await axios.post(`${APP_URL}/api/underwater-tools/`, formData, {
+        var response = await axios.post(`${APP_URL}/api/brush-things/`, formData, {
             headers: {
                 'Content-Type': 'multipart/form-data'
             }
@@ -212,46 +204,6 @@ const UnderWaterTools = () => {
                     md={4}
                 >
 
-                    <div
-                        style={{
-                            display: 'flex',
-                        }}
-                    >
-                        {
-                            inputLoaded &&
-                            <ButtonGroup>
-                                {radios.map((radio, idx) => (
-                                    <ToggleButton
-                                        key={idx}
-                                        id={`radio-${idx}`}
-                                        type="radio"
-                                        variant={'outline-light'}
-                                        name="radio"
-                                        value={radio.value}
-                                        checked={radioValue === radio.value}
-                                        onChange={(e) => setRadioValue(e.currentTarget.value)}
-                                    >
-                                        {radio.name}
-                                    </ToggleButton>
-                                ))}
-                            </ButtonGroup>
-                        }
-
-                        <div
-                            style={{
-                                marginLeft: '2rem'
-                            }}
-                        >
-                            <Spinner
-                                style={{ color: 'white' }}
-                                animation="border"
-                                role="status"
-                                hidden={!loading}
-                            />
-                        </div>
-
-                    </div>
-
                     <div className="margin-global-top-2" />
 
                     <input ref={hiddenFileInput} type="file" id="fileInput" name="file" onChange={imageChange} style={{ display: 'none' }} />
@@ -294,7 +246,7 @@ const UnderWaterTools = () => {
 
                 <Col>
                     <div className='fancy-text-container'>
-                        <BouncyText text="underwater image processing" />
+                        <BouncyText text="Fun With Brush" />
                     </div >
                 </Col>
             </Row>
@@ -383,6 +335,25 @@ const UnderWaterTools = () => {
 
                         </Col>
                         <Col>
+                            {loading &&
+                                <div
+                                    style={{ color: 'white', marginTop: '2rem' }}
+                                    className="justify-content-center align-items-center"
+                                >
+                                    <Spinner
+                                        animation="border"
+                                        role="status"
+                                        style={{
+                                            width: "4rem",
+                                            height: "4rem",
+                                            display: loading ? "block" : "none"
+                                        }}
+                                    >
+                                    </Spinner>
+
+                                </div>
+                            }
+
                             <div
                                 id='output-canvas-container'
                                 style={{
@@ -406,4 +377,4 @@ const UnderWaterTools = () => {
     )
 }
 
-export default UnderWaterTools;
+export default FunWithBrush;

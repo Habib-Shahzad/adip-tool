@@ -133,9 +133,7 @@ const BasicTools = () => {
                         </ButtonGroup>
                     }
 
-
                     <div className="margin-global-top-2" />
-
 
                     <input ref={hiddenFileInput} type="file" id="fileInput" name="file" onChange={imageChange} style={{ display: 'none' }} />
 

@@ -24,5 +24,6 @@ urlpatterns = [
     path('api/underwater-tools/', views.underwater_tools_view),
     path('api/fft/', views.compute_fft),
     path('api/inv-fft/', views.compute_inv_fft),
+    path('api/brush-things/', views.brush_view),
 
 ]

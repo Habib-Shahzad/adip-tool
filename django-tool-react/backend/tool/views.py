@@ -62,8 +62,10 @@ def compute_inv_fft(request):
     myfile = f.read()
     f_normalized = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_GRAYSCALE)
 
+
     input_image = f2.read()
     input_image = cv2.imdecode(np.frombuffer(input_image , np.uint8), cv2.IMREAD_COLOR)
+
 
     ycrcb_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
     y_channel = ycrcb_image[:, :, 0]
@@ -110,11 +112,8 @@ def compute_inv_fft(request):
     inverse_normalized = np.abs(inverse)
 
     merged = cv2.merge([inverse_normalized.astype(np.uint8), cr_channel, cb_channel])
-
     image = cv2.cvtColor(merged, cv2.COLOR_YCrCb2BGR)
 
-
-    white = np.ones((H, W), dtype=np.uint8) * 255
     _, imdata = cv2.imencode('.JPG', image )
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
     return JsonResponse(jstr, safe=False)
@@ -132,6 +131,7 @@ def compute_fft(request):
     f = request.FILES['upload']
     myfile = f.read()
     image = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_COLOR)
+
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(image)
     fshift = np.fft.fftshift(f)
@@ -146,16 +146,65 @@ def compute_fft(request):
 
 
 @csrf_exempt
-def underwater_tools_view(request):
-    f = request.FILES['upload']
-    myfile = f.read()
-    image = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_COLOR)
+def brush_view(request):
+    empty_canvas = request.FILES['upload']
+    input_image = request.FILES['input']
 
-    radioValue = int(request.POST['radioValue'])
-    if radioValue == 1:
-        image = main_CLAHE(image)
-    elif radioValue == 2:
-        image = main_LabCC(image)
+    input_image = input_image.read()
+    empty_canvas = empty_canvas.read()
+
+    input_image = cv2.imdecode(np.frombuffer(input_image , np.uint8), cv2.IMREAD_COLOR)
+    empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas , np.uint8), cv2.IMREAD_GRAYSCALE)
+
+    image = input_image
+
+    H, W = image.shape[:2]
+
+    result = np.where(empty_canvas == 255)
+    listOfCoordinates= list(zip(result[0], result[1]))
+
+    for x,y in listOfCoordinates:
+        r,_,_ = image[x,y]
+        image[x,y] = np.array([r,r,r])
+
+
+    _, imdata = cv2.imencode('.JPG', image)
+    jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
+    return JsonResponse(jstr, safe=False)
+
+
+
+@csrf_exempt
+def underwater_tools_view(request):
+
+    empty_canvas = request.FILES['upload']
+    input_image = request.FILES['input']
+    radio_value = request.POST.get('radioValue')
+
+    input_image = input_image.read()
+    empty_canvas = empty_canvas.read()
+
+    input_image = cv2.imdecode(np.frombuffer(input_image , np.uint8), cv2.IMREAD_COLOR)
+    empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas , np.uint8), cv2.IMREAD_GRAYSCALE)
+
+    image = input_image
+
+    result = np.where(empty_canvas == 255)
+    listOfCoordinates= list(zip(result[0], result[1]))
+
+    white_image = np.zeros((image.shape[0], image.shape[1], 3), np.uint8)
+
+    output_image = white_image
+
+    if radio_value == '1':
+        output_image = main_CLAHE(image)
+
+    if radio_value == '2':
+        output_image = main_LabCC(image)
+
+
+    for x, y in listOfCoordinates:
+        image[x, y] = output_image[x, y]
 
 
     _, imdata = cv2.imencode('.JPG', image)

@@ -100,13 +100,7 @@ def cv_hist_eq(Iay):
             valy = Iay[j][i]
             if (valy>0 and valy<256):
                 histoy[valy]=histoy[valy]+1
-    
 
-
-    # fig1 = plt.figure()
-    # ax1 = fig1.add_subplot(121)
-    # ax2 = fig1.add_subplot(122)
-    # ax1.plot(range(256), histoy)
 
     clip_limit = max(histoy)/2
 

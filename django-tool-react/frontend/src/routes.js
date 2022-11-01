@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { Home, About, BasicTools, UnderWaterTools, FourierTransformTools } from './pages';
+import { Home, About, BasicTools, UnderWaterTools, FourierTransformTools, FunWithBrush } from './pages';
 
 
 const routes = [
@@ -20,6 +20,13 @@ const routes = [
         path: '/basic-tools',
         name: 'Basic Tools',
         element: <BasicTools />,
+        nodeRef: createRef()
+    },
+
+    {
+        path: '/fun-with-brush',
+        name: 'Fun With Brush',
+        element: <FunWithBrush />,
         nodeRef: createRef()
     },
 
