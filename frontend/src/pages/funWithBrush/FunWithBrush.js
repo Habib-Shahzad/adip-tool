@@ -116,6 +116,65 @@ const FunWithBrush = () => {
 
     }
 
+
+    const getRGB = (img, x, y) => {
+        let r = img.data[y * img.cols * img.channels() + x * img.channels()];
+        let g = img.data[y * img.cols * img.channels() + x * img.channels() + 1];
+        let b = img.data[y * img.cols * img.channels() + x * img.channels() + 2];
+        return { r, g, b };
+    }
+
+
+    const makeChangesJS = async () => {
+
+        setLoading(true);
+
+        var formData = new FormData();
+
+        var myInputImage = document.getElementById('fileInput').files[0];
+        formData.append("input", myInputImage);
+
+        const hiddenCanvas = document.getElementById("hidden-drawing-canvas");
+
+
+        const canvasImage = cv.imread(hiddenCanvas);
+
+        const inputImage = cv.imread("image-input");
+        const outputMat = inputImage.clone();
+
+        for (let i = 0; i < canvasImage.rows; i++) {
+            for (let j = 0; j < canvasImage.cols; j++) {
+                
+                const { r, g, b } = getRGB(canvasImage, j, i);
+                const imagePixel = getRGB(inputImage, j, i); 
+
+                if (r === 255 && g === 255 && b === 255) {                    
+                    outputMat.ucharPtr(i, j)[0] = imagePixel.r;
+                    outputMat.ucharPtr(i, j)[1] = imagePixel.r;
+                    outputMat.ucharPtr(i, j)[2] = imagePixel.r;
+                    outputMat.ucharPtr(i, j)[3] = 255;
+                }
+                
+            }
+        }
+
+
+        const canvas = document.getElementById("output-canvas");
+        
+        canvas.width = inputImage.cols;
+        canvas.height = inputImage.rows;
+
+
+        var ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        cv.imshow(canvas, outputMat);
+
+        setLoading(false);
+        setOutputProcessed(true);
+
+    }
+
     const hiddenFileInput = React.useRef(null);
 
     const handleClick = event => {
@@ -220,15 +279,16 @@ const FunWithBrush = () => {
                     {
                         inputLoaded &&
                         <>
-                            <Button
+                            {/* <Button
                                 style={{ marginLeft: '2rem' }}
-                                disabled={loading}
-                                onClick={makeChanges}
+                                disabled={loading || !inputLoaded}
+                                // onClick={makeChanges}
+                                onClick={makeChangesJS}
                                 type="submit"
                                 variant="outline-light"
                             >
                                 Show Output
-                            </Button>
+                            </Button> */}
 
                             <Button
                                 style={{ marginLeft: '2rem' }}
@@ -322,6 +382,7 @@ const FunWithBrush = () => {
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(false);
                                         context.beginPath();
+                                        makeChangesJS();
                                     }}
 
                                     onMouseOut={e => {

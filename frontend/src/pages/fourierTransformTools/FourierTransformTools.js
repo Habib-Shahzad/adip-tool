@@ -224,7 +224,7 @@ const FourierTransform = () => {
                         }
                     >
                         <Button
-                            disabled={loading}
+                            disabled={loading || fftLoading}
                             onClick={handleClick}
                             type="button"
                             variant="outline-light"
@@ -237,7 +237,7 @@ const FourierTransform = () => {
                             <>
                                 <Button
                                     style={{ marginLeft: '2rem' }}
-                                    disabled={loading}
+                                    disabled={loading || fftLoading}
                                     onClick={computeNormalizedFFT}
                                     type="submit"
                                     variant="outline-light"

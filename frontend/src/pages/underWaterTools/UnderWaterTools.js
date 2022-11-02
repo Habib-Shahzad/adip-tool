@@ -219,9 +219,12 @@ const UnderWaterTools = () => {
                     >
                         {
                             inputLoaded &&
-                            <ButtonGroup>
+                            <ButtonGroup
+                            disabled={loading}
+                            >
                                 {radios.map((radio, idx) => (
                                     <ToggleButton
+                                        disabled={loading}
                                         key={idx}
                                         id={`radio-${idx}`}
                                         type="radio"
