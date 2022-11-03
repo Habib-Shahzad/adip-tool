@@ -1,1 +1,0 @@
-source /Users/habib/.local/share/virtualenvs/django-tool-react-mrMKETQ4/bin/activate
