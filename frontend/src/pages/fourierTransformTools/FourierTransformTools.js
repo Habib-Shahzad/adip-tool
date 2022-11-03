@@ -1,11 +1,10 @@
 
-/* eslint-disable no-unused-vars */
+
 
 import React, { useState } from "react";
 import axios from "axios";
 import { Row, Col, Container, Button, Spinner, Form } from "react-bootstrap";
 import './FourierTransformTools.css';
-import { useOpenCv } from "../../lib/useOpenCv";
 import { BouncyText } from "../../components";
 
 const APP_URL = "http://localhost:8000";
@@ -14,32 +13,40 @@ const APP_URL = "http://localhost:8000";
 
 const FourierTransform = () => {
 
-    const { loaded, cv } = useOpenCv();
-
     const [fileUrl, setFileUrl] = useState(null);
     const [inputLoaded, setInputLoaded] = useState(false);
-    const [fftLoading, setFftLoading] = useState(false);
-
-    const [dataUrl, setDataUrl] = useState(null);
+    const [inputDataUrl, setInputDataUrl] = useState(null);
 
     const [isDrawing, setIsDrawing] = useState(false);
     const [markerSize, setMarkerSize] = useState(25);
 
     const [outputProcessed, setOutputProcessed] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [fftLoading, setFftLoading] = useState(false);
+
+    function drawImageScaled(img, ctx) {
+        var canvas = ctx.canvas;
+        var hRatio = canvas.width / img.width;
+        var vRatio = canvas.height / img.height;
+        var ratio = Math.min(hRatio, vRatio);
+        var centerShift_x = (canvas.width - img.width * ratio) / 2;
+        var centerShift_y = (canvas.height - img.height * ratio) / 2;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, img.width, img.height,
+            centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
+    }
 
     const imageChange = e => {
         const file = e.target.files[0];
         const imageUrl = URL.createObjectURL(file);
 
         setOutputProcessed(null);
-
         setFileUrl(imageUrl);
 
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onloadend = () => {
-            setDataUrl(reader.result);
+            setInputDataUrl(reader.result);
         }
 
         const canvas = document.getElementById("fourier-input-canvas");
@@ -48,10 +55,11 @@ const FourierTransform = () => {
         const img = new Image();
         img.src = imageUrl;
 
+        canvas.height = 1000;
+        canvas.width = 1000;
+
         img.onload = function () {
-            canvas.height = img.height;
-            canvas.width = img.width;
-            ctx.drawImage(img, 0, 0, img.width, img.height);
+            drawImageScaled(img, ctx);
             setInputLoaded(true);
         }
 
@@ -98,59 +106,107 @@ const FourierTransform = () => {
     }
 
 
+
+    const cropCanvas = (sourceCanvas, left, top, width, height) => {
+        let destCanvas = document.createElement('canvas');
+        destCanvas.width = width;
+        destCanvas.height = height;
+        destCanvas.getContext("2d").drawImage(
+            sourceCanvas,
+            left,
+            top,
+            width,
+            height,
+            0,
+            0,
+            width,
+            height);
+        return destCanvas;
+    }
+
+    const cropTheCanvas = (ctx, img) => {
+        var canvas = ctx.canvas;
+        var hRatio = canvas.width / img.width;
+        var vRatio = canvas.height / img.height;
+        var ratio = Math.min(hRatio, vRatio);
+        var centerShift_x = (canvas.width - img.width * ratio) / 2;
+        var centerShift_y = (canvas.height - img.height * ratio) / 2;
+        return cropCanvas(canvas, centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
+    }
+
+
     const computeInverseFFT = async () => {
 
         // Processing 
         setFftLoading(true);
 
-        // Get the input image from the canvas
-        const canvas = document.getElementById("fourier-canvas");
+        // Get the fourier image from the canvas
+        const fourierCanvas = document.getElementById("fourier-canvas");
+        const fourierCtx = fourierCanvas.getContext("2d");
         var inputImageFile = document.getElementById('fileInput').files[0];
 
+        // create input image
+        const inputImageElement = document.getElementById('image-input');
+
         // Get the image data from the canvas
-        var imagefile = new Image();
-        imagefile.src = canvas.toDataURL();
+        var fourierImageElement = new Image();
+        fourierImageElement.src = fourierCanvas.toDataURL();
 
-        // send the input image and the fft image to the backend
-        var formData = new FormData();
-        formData.append("upload", dataURLtoFile(canvas.toDataURL(), "image.png"));
-        formData.append("input", inputImageFile);
+        let bufferCanvas = document.createElement('canvas');
+        bufferCanvas.width = inputImageElement.width;
+        bufferCanvas.height = inputImageElement.height;
+        let bufferCtx = bufferCanvas.getContext('2d');
 
-        // Get the response from the backend
-        var response = await axios.post(`${APP_URL}/api/inv-fft/`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
+        const croppedCanvas = cropTheCanvas(fourierCtx, inputImageElement);
+        const croppedImage = new Image();
+        croppedImage.src = croppedCanvas.toDataURL();
+
+        croppedImage.onload = async () => {
+
+            drawImageScaled(croppedImage, bufferCtx);
+
+            // send the input image and the fft image to the backend
+            var formData = new FormData();
+            formData.append("upload", dataURLtoFile(bufferCanvas.toDataURL(), "image.png"));
+            formData.append("input", inputImageFile);
+
+            // Get the response from the backend
+            var response = await axios.post(`${APP_URL}/api/inv-fft/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            // Get the image from the response
+            var responseData = JSON.parse(response.data);
+            var myImageData = responseData.image;
+            var newSrc = "data:image/png;base64," + myImageData;
+
+            const inputCanvas = document.getElementById("fourier-input-canvas");
+            const inputCtx = inputCanvas.getContext("2d");
+
+            // Draw the image on the input canvas
+            let updatedInputImage = new Image();
+            updatedInputImage.src = newSrc;
+
+            updatedInputImage.onload = () => {
+                inputCtx.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
+                drawImageScaled(updatedInputImage, inputCtx);
             }
-        });
 
-        // Get the image from the response
-        var responseData = JSON.parse(response.data);
-        var myImageData = responseData.image;
-        var newSrc = "data:image/png;base64," + myImageData;
-
-        const inputCanvas = document.getElementById("fourier-input-canvas");
-        const inputCtx = inputCanvas.getContext("2d");
-
-        // Draw the image on the input canvas
-        let outputImage = new Image();
-        outputImage.src = newSrc;
-
-        outputImage.onload = () => {
-            inputCtx.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
-            inputCtx.drawImage(outputImage, 0, 0);
+            // Processing done
+            setFftLoading(false);
         }
-
-        // Processing done
-        setFftLoading(false);
     }
 
     const computeNormalizedFFT = async () => {
 
+        setFftLoading(true);
+
         const inputCanvas = document.getElementById("fourier-input-canvas");
-        const inputImage = cv.imread("image-input");
-    
+
         var formData = new FormData();
-        formData.append("upload", dataURLtoFile(dataUrl, "image.png"));
+        formData.append("upload", dataURLtoFile(inputDataUrl, "image.png"));
 
         var response = await axios.post(`${APP_URL}/api/fft/`, formData, {
             headers: {
@@ -167,42 +223,33 @@ const FourierTransform = () => {
         outputImge.src = newSrc;
 
         // change the height and width of the output canvas according to input image
-        var canvas = document.getElementById('fourier-canvas');
-        canvas.width = inputCanvas.width;
-        canvas.height = inputCanvas.height;
+        var outputCanvas = document.getElementById('fourier-canvas');
+        outputCanvas.width = 1000;
+        outputCanvas.height = 1000;
 
         // reset the input canvas
-        
         const inputCtx = inputCanvas.getContext("2d");
         inputCtx.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
-        cv.imshow("fourier-input-canvas", inputImage);
 
+        const inputImageElement = new Image();
+        inputImageElement.src = inputDataUrl;
+        inputImageElement.onload = () => {
+            drawImageScaled(inputImageElement, inputCtx);
+        }
         // draw the output image on the canvas
         outputImge.onload = function () {
-            var ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(outputImge, 0, 0);
+            var ctx = outputCanvas.getContext('2d');
+            ctx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+            drawImageScaled(outputImge, ctx);
+            // ctx.drawImage(outputImge, 0, 0);
         }
 
         // Processing done
         setOutputProcessed(true);
         setLoading(false);
+        setFftLoading(false);
 
 
-    }
-
-
-    if (!loaded) {
-        return (
-            <Container style={{ marginTop: '1rem' }}>
-                <Row className="justify-content-md-center">
-                    <Col md="auto">
-                        <Spinner style={{ color: 'white' }} animation="border" role="status">
-                        </Spinner>
-                    </Col>
-                </Row>
-            </Container>
-        );
     }
 
 
@@ -380,6 +427,7 @@ const FourierTransform = () => {
                                         var canvas = document.getElementById('fourier-canvas');
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(false);
+                                        isDrawing && computeInverseFFT();
                                         context.beginPath();
                                     }}
                                 />
@@ -388,9 +436,6 @@ const FourierTransform = () => {
                     </Row>
                 </Container>
             </>
-
-
-
 
         </Container>
     )

@@ -18,7 +18,12 @@ function App() {
   return (
     <>
       <OpenCvProvider>
-        <Navbar bg="dark" variant="dark">
+        <Navbar
+          md="auto"
+          bg="dark"
+          collapseOnSelect
+          expand="lg"
+          variant="dark">
           <Container>
             <Link to='/'>
               <Navbar.Brand>

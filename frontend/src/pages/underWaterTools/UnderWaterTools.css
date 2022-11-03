@@ -1,4 +1,4 @@
-canvas#drawing-canvas {
+canvas#underwater-input-canvas {
   cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'  width='40' height='48' viewport='0 0 100 100' style='fill:black;font-size:24px;'><text y='50%'>✍️</text></svg>")
       5 25,
     auto;
@@ -8,13 +8,29 @@ canvas#drawing-canvas {
   max-height: 100%;
 }
 
-#output-canvas-container {
+canvas#underwater-output-canvas {
+
+  border: 1px solid #ccc;
+  max-width: 100%;
+  max-height: 100%;
+  
+}
+
+#underwater-input-canvas-container {
   max-height: 50rem;
   max-width: 50rem;
   border: 1px solid #ccc;
 }
-#drawing-canvas-container {
+
+#hidden-underwater-input-canvas {
   max-height: 50rem;
+  max-width: 50rem;
+  border: 1px solid #ccc;
+  background-color: red;
+}
+
+#underwater-input-drawing-container {
+  max-height: 50rems;
   max-width: 50rem;
   border: 1px solid #ccc;
 }

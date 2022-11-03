@@ -62,10 +62,8 @@ def compute_inv_fft(request):
     myfile = f.read()
     f_normalized = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_GRAYSCALE)
 
-
     input_image = f2.read()
     input_image = cv2.imdecode(np.frombuffer(input_image , np.uint8), cv2.IMREAD_COLOR)
-
 
     ycrcb_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
     y_channel = ycrcb_image[:, :, 0]
@@ -135,6 +133,7 @@ def compute_fft(request):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(image)
     fshift = np.fft.fftshift(f)
+
     spectrum = FFTPlot(fshift)
     _, imdata = cv2.imencode('.JPG', spectrum)
 
@@ -157,8 +156,6 @@ def brush_view(request):
     empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas , np.uint8), cv2.IMREAD_GRAYSCALE)
 
     image = input_image
-
-    H, W = image.shape[:2]
 
     result = np.where(empty_canvas == 255)
     listOfCoordinates= list(zip(result[0], result[1]))

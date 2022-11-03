@@ -17,8 +17,20 @@ const UnderWaterTools = () => {
 
     const [fileUrl, setFileUrl] = useState(null);
     const [inputLoaded, setInputLoaded] = useState(false);
+    const [inputDataUrl, setInputDataUrl] = useState(null);
 
-    const [dataUrl, setDataUrl] = useState(null);
+
+    function drawImageScaled(img, ctx) {
+        var canvas = ctx.canvas;
+        var hRatio = canvas.width / img.width;
+        var vRatio = canvas.height / img.height;
+        var ratio = Math.min(hRatio, vRatio);
+        var centerShift_x = (canvas.width - img.width * ratio) / 2;
+        var centerShift_y = (canvas.height - img.height * ratio) / 2;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, img.width, img.height,
+            centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
+    }
 
     const [isDrawing, setIsDrawing] = useState(false);
     const [markerSize, setMarkerSize] = useState(25);
@@ -35,27 +47,27 @@ const UnderWaterTools = () => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onloadend = () => {
-            setDataUrl(reader.result);
+            setInputDataUrl(reader.result);
         }
 
-        const canvas = document.getElementById("drawing-canvas");
+        const canvas = document.getElementById("underwater-input-canvas");
         const ctx = canvas.getContext("2d");
 
-        const hiddenCanvas = document.getElementById("hidden-drawing-canvas");
+        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
 
         const img = new Image();
         img.src = imageUrl;
 
+        canvas.height = 1000;
+        canvas.width = 1000;
+
+        hiddenCanvas.height = 1000;
+        hiddenCanvas.width = 1000;
+
         img.onload = function () {
-            canvas.height = img.height;
-            canvas.width = img.width;
-            ctx.drawImage(img, 0, 0, img.width, img.height);
-
-            hiddenCanvas.height = img.height;
-            hiddenCanvas.width = img.width;
+            drawImageScaled(img, ctx);
             hiddenCtx.fillStyle = "white";
-
             setInputLoaded(true);
         }
 
@@ -77,51 +89,89 @@ const UnderWaterTools = () => {
         return new File([u8arr], filename, { type: mime });
     }
 
+    const cropCanvas = (sourceCanvas, left, top, width, height) => {
+        let destCanvas = document.createElement('canvas');
+        destCanvas.width = width;
+        destCanvas.height = height;
+        destCanvas.getContext("2d").drawImage(
+            sourceCanvas,
+            left,
+            top,
+            width,
+            height,
+            0,
+            0,
+            width,
+            height);
+        return destCanvas;
+    }
+
+    const cropTheCanvas = (ctx, img) => {
+        var canvas = ctx.canvas;
+        var hRatio = canvas.width / img.width;
+        var vRatio = canvas.height / img.height;
+        var ratio = Math.min(hRatio, vRatio);
+        var centerShift_x = (canvas.width - img.width * ratio) / 2;
+        var centerShift_y = (canvas.height - img.height * ratio) / 2;
+        return cropCanvas(canvas, centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
+    }
+
     const makeChanges = async () => {
 
         setLoading(true);
-        var formData = new FormData();
+        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
+        const hiddenCtx = hiddenCanvas.getContext("2d");
+        const inputImageElement = document.getElementById('image-input');
 
-        var myInputImage = document.getElementById('fileInput').files[0];
-        formData.append("input", myInputImage);
+        const croppedCanvas = cropTheCanvas(hiddenCtx, inputImageElement);
 
-        const hiddenCanvas = document.getElementById("hidden-drawing-canvas");
+        const bufferCanvas = document.createElement('canvas');
+        bufferCanvas.width = inputImageElement.width;
+        bufferCanvas.height = inputImageElement.height;
 
-        formData.append("upload", dataURLtoFile(hiddenCanvas.toDataURL(), "image.png"));
-        formData.append("input", myInputImage);
-        formData.append("radioValue", radioValue);
+        const croppedImage = new Image();
+        croppedImage.src = croppedCanvas.toDataURL();
 
-        var response = await axios.post(`${APP_URL}/api/underwater-tools/`, formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
+        croppedImage.onload = async () => {
+            drawImageScaled(croppedImage, bufferCanvas.getContext("2d"));
+
+            const inputImageFile = document.getElementById('fileInput').files[0];
+
+            var formData = new FormData();
+
+            formData.append("upload", dataURLtoFile(bufferCanvas.toDataURL(), "image.png"));
+            formData.append("input", inputImageFile);
+            formData.append("radioValue", radioValue);
+
+
+            var response = await axios.post(`${APP_URL}/api/underwater-tools/`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+
+            var responseData = JSON.parse(response.data);
+            var myImageData = responseData.image;
+            var newSrc = "data:image/png;base64," + myImageData;
+
+            let outputImage = new Image();
+            outputImage.src = newSrc;
+
+            const outputCanvas = document.getElementById("underwater-output-canvas");
+
+            outputCanvas.width = 1000;
+            outputCanvas.height = 1000;
+
+            outputImage.onload = () => {
+                var outputCtx = outputCanvas.getContext('2d');
+                outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+                drawImageScaled(outputImage, outputCtx);
             }
-        });
 
-        var responseData = JSON.parse(response.data);
-        var myImageData = responseData.image;
+            setLoading(false);
+            setOutputProcessed(true);
 
-
-        var newSrc = "data:image/png;base64," + myImageData;
-
-        let outputImage = new Image();
-        outputImage.src = newSrc;
-
-        const canvas = document.getElementById("output-canvas");
-
-        const inputImage = cv.imread("image-input");
-
-        canvas.width = inputImage.cols;
-        canvas.height = inputImage.rows;
-
-        outputImage.onload = () => {
-            var ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(outputImage, 0, 0);
         }
-
-        setLoading(false);
-        setOutputProcessed(true);
-
     }
 
     const hiddenFileInput = React.useRef(null);
@@ -132,22 +182,26 @@ const UnderWaterTools = () => {
 
 
     const resetCanvas = () => {
-        const canvas = document.getElementById("drawing-canvas");
+        const canvas = document.getElementById("underwater-input-canvas");
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const hiddenCanvas = document.getElementById("hidden-drawing-canvas");
+        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
         hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
-        const outputCanvas = document.getElementById("output-canvas");
+        const outputCanvas = document.getElementById("underwater-output-canvas");
         const outputCtx = outputCanvas.getContext("2d");
         outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
         const image = new Image();
         image.src = fileUrl;
+
+        canvas.height = 1000;
+        canvas.width = 1000;
+
         image.onload = function () {
-            ctx.drawImage(image, 0, 0, image.width, image.height);
+            drawImageScaled(image, ctx);
         }
     }
 
@@ -173,9 +227,9 @@ const UnderWaterTools = () => {
         context.arc(x, y, markerSize, 0, Math.PI * 2);
         context.fill();
 
-
-        const hiddenCanvas = document.getElementById("hidden-drawing-canvas");
+        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
+
 
         hiddenCtx.lineTo(x, y);
         hiddenCtx.lineWidth = markerSize;
@@ -220,7 +274,7 @@ const UnderWaterTools = () => {
                         {
                             inputLoaded &&
                             <ButtonGroup
-                            disabled={loading}
+                                disabled={loading}
                             >
                                 {radios.map((radio, idx) => (
                                     <ToggleButton
@@ -337,23 +391,24 @@ const UnderWaterTools = () => {
                             </div>
 
                             <div
-                                id='drawing-canvas-container'
+                                id='underwater-input-canvas-container'
                                 style={{
                                     display: inputLoaded ? 'block' : 'none',
                                 }}
                             >
 
                                 <canvas
-                                    id='hidden-drawing-canvas'
+                                    id='hidden-underwater-input-canvas'
                                     style={{
-                                        display: 'none'
+                                        display: 'none',
+                                        border: '5px solid white'
                                     }}
                                 />
 
                                 <canvas
-                                    id="drawing-canvas"
+                                    id="underwater-input-canvas"
                                     onMouseDown={e => {
-                                        var canvas = document.getElementById('drawing-canvas');
+                                        var canvas = document.getElementById('underwater-input-canvas');
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(true);
                                         highlightOnCanvas(e, canvas, context);
@@ -361,7 +416,7 @@ const UnderWaterTools = () => {
                                     }}
                                     onMouseMove={e => {
 
-                                        var canvas = document.getElementById('drawing-canvas');
+                                        var canvas = document.getElementById('underwater-input-canvas');
                                         var context = canvas.getContext('2d');
                                         if (isDrawing) {
                                             highlightOnCanvas(e, canvas, context);
@@ -369,14 +424,14 @@ const UnderWaterTools = () => {
 
                                     }}
                                     onMouseUp={e => {
-                                        var canvas = document.getElementById('drawing-canvas');
+                                        var canvas = document.getElementById('underwater-input-canvas');
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(false);
                                         context.beginPath();
                                     }}
 
                                     onMouseOut={e => {
-                                        var canvas = document.getElementById('drawing-canvas');
+                                        var canvas = document.getElementById('underwater-input-canvas');
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(false);
                                         context.beginPath();
@@ -387,14 +442,14 @@ const UnderWaterTools = () => {
                         </Col>
                         <Col>
                             <div
-                                id='output-canvas-container'
+                                id='underwater-output-canvas-container'
                                 style={{
                                     marginTop: '4rem',
                                     display: outputProcessed ? 'block' : 'none',
                                 }}
                             >
                                 <canvas
-                                    id="output-canvas"
+                                    id="underwater-output-canvas"
                                 />
                             </div>
                         </Col>
