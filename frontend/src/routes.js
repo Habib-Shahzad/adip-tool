@@ -1,5 +1,5 @@
 import { createRef } from 'react';
-import { Home, About, BasicTools, UnderWaterTools, FourierTransformTools, FunWithBrush } from './pages';
+import { Home, About, BasicTools, AlgorithmTools, FourierTransformTools } from './pages';
 
 
 const routes = [
@@ -23,17 +23,17 @@ const routes = [
         nodeRef: createRef()
     },
 
-    {
-        path: '/fun-with-brush',
-        name: 'Fun With Brush',
-        element: <FunWithBrush />,
-        nodeRef: createRef()
-    },
+    // {
+    //     path: '/fun-with-brush',
+    //     name: 'Fun With Brush',
+    //     element: <FunWithBrush />,
+    //     nodeRef: createRef()
+    // },
 
     {
-        path: '/underwater-tools',
-        name: 'underwater tools',
-        element: <UnderWaterTools />,
+        path: '/algorithmic-tools',
+        name: 'Algorithmic tools',
+        element: <AlgorithmTools/>,
         nodeRef: createRef()
     },
 

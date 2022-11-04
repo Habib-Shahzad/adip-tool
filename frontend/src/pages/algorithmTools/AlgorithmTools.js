@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import axios from "axios";
 import { Row, Col, Container, ToggleButton, ButtonGroup, Button, Spinner, Form } from "react-bootstrap";
-import './UnderWaterTools.css';
+import './AlgorithmTools.css';
 import { useOpenCv } from "../../lib/useOpenCv";
 import { BouncyText } from "../../components";
 
@@ -11,7 +11,7 @@ const APP_URL = "http://localhost:8000";
 // const APP_URL = "https://adip-tool.herokuapp.com";
 
 
-const UnderWaterTools = () => {
+const AlgorithmTools = () => {
 
     const { loaded, cv } = useOpenCv();
 
@@ -50,10 +50,10 @@ const UnderWaterTools = () => {
             setInputDataUrl(reader.result);
         }
 
-        const canvas = document.getElementById("underwater-input-canvas");
+        const canvas = document.getElementById("algorithmic-input-canvas");
         const ctx = canvas.getContext("2d");
 
-        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
+        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
 
         const img = new Image();
@@ -119,7 +119,7 @@ const UnderWaterTools = () => {
     const makeChanges = async () => {
 
         setLoading(true);
-        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
+        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
         const inputImageElement = document.getElementById('image-input');
 
@@ -144,7 +144,7 @@ const UnderWaterTools = () => {
             formData.append("radioValue", radioValue);
 
 
-            var response = await axios.post(`${APP_URL}/api/underwater-tools/`, formData, {
+            var response = await axios.post(`${APP_URL}/api/algorithmic-tools/`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'
                 }
@@ -157,7 +157,7 @@ const UnderWaterTools = () => {
             let outputImage = new Image();
             outputImage.src = newSrc;
 
-            const outputCanvas = document.getElementById("underwater-output-canvas");
+            const outputCanvas = document.getElementById("algorithmic-output-canvas");
 
             outputCanvas.width = 1000;
             outputCanvas.height = 1000;
@@ -182,15 +182,15 @@ const UnderWaterTools = () => {
 
 
     const resetCanvas = () => {
-        const canvas = document.getElementById("underwater-input-canvas");
+        const canvas = document.getElementById("algorithmic-input-canvas");
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
+        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
         hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
-        const outputCanvas = document.getElementById("underwater-output-canvas");
+        const outputCanvas = document.getElementById("algorithmic-output-canvas");
         const outputCtx = outputCanvas.getContext("2d");
         outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
 
@@ -227,7 +227,7 @@ const UnderWaterTools = () => {
         context.arc(x, y, markerSize, 0, Math.PI * 2);
         context.fill();
 
-        const hiddenCanvas = document.getElementById("hidden-underwater-input-canvas");
+        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
 
 
@@ -351,7 +351,7 @@ const UnderWaterTools = () => {
 
                 <Col>
                     <div className='fancy-text-container'>
-                        <BouncyText text="underwater image processing" />
+                        <BouncyText text="Algorithmic Image Processing" />
                     </div >
                 </Col>
             </Row>
@@ -391,14 +391,14 @@ const UnderWaterTools = () => {
                             </div>
 
                             <div
-                                id='underwater-input-canvas-container'
+                                id='algorithmic-input-canvas-container'
                                 style={{
                                     display: inputLoaded ? 'block' : 'none',
                                 }}
                             >
 
                                 <canvas
-                                    id='hidden-underwater-input-canvas'
+                                    id='hidden-algorithmic-input-canvas'
                                     style={{
                                         display: 'none',
                                         border: '5px solid white'
@@ -406,9 +406,9 @@ const UnderWaterTools = () => {
                                 />
 
                                 <canvas
-                                    id="underwater-input-canvas"
+                                    id="algorithmic-input-canvas"
                                     onMouseDown={e => {
-                                        var canvas = document.getElementById('underwater-input-canvas');
+                                        var canvas = document.getElementById('algorithmic-input-canvas');
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(true);
                                         highlightOnCanvas(e, canvas, context);
@@ -416,7 +416,7 @@ const UnderWaterTools = () => {
                                     }}
                                     onMouseMove={e => {
 
-                                        var canvas = document.getElementById('underwater-input-canvas');
+                                        var canvas = document.getElementById('algorithmic-input-canvas');
                                         var context = canvas.getContext('2d');
                                         if (isDrawing) {
                                             highlightOnCanvas(e, canvas, context);
@@ -424,14 +424,14 @@ const UnderWaterTools = () => {
 
                                     }}
                                     onMouseUp={e => {
-                                        var canvas = document.getElementById('underwater-input-canvas');
+                                        var canvas = document.getElementById('algorithmic-input-canvas');
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(false);
                                         context.beginPath();
                                     }}
 
                                     onMouseOut={e => {
-                                        var canvas = document.getElementById('underwater-input-canvas');
+                                        var canvas = document.getElementById('algorithmic-input-canvas');
                                         var context = canvas.getContext('2d');
                                         setIsDrawing(false);
                                         context.beginPath();
@@ -442,14 +442,14 @@ const UnderWaterTools = () => {
                         </Col>
                         <Col>
                             <div
-                                id='underwater-output-canvas-container'
+                                id='algorithmic-output-canvas-container'
                                 style={{
                                     marginTop: '4rem',
                                     display: outputProcessed ? 'block' : 'none',
                                 }}
                             >
                                 <canvas
-                                    id="underwater-output-canvas"
+                                    id="algorithmic-output-canvas"
                                 />
                             </div>
                         </Col>
@@ -464,4 +464,4 @@ const UnderWaterTools = () => {
     )
 }
 
-export default UnderWaterTools;
+export default AlgorithmTools;

@@ -172,7 +172,7 @@ def brush_view(request):
 
 
 @csrf_exempt
-def underwater_tools_view(request):
+def algorithmic_tools_view(request):
 
     empty_canvas = request.FILES['upload']
     input_image = request.FILES['input']

@@ -53,23 +53,23 @@ function App() {
 
 
 
-              <Nav.Link
+              {/* <Nav.Link
                 key={'/fun-with-brush'}
                 as={NavLink}
                 to={'/fun-with-brush'}
                 end
               >
                 {'Fun With Brush'}
-              </Nav.Link>
+              </Nav.Link> */}
 
 
               <Nav.Link
-                key={'/underwater-tools'}
+                key={'/algorithmic-tools'}
                 as={NavLink}
-                to={'/underwater-tools'}
+                to={'/algorithmic-tools'}
                 end
               >
-                {'Underwater Tools'}
+                {'Algorithmic Tools'}
               </Nav.Link>
 
               <Nav.Link
