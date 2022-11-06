@@ -39,6 +39,8 @@ Go to the backend directory
 cd backend
 ```
 Install the dependecies (required python packages):
+it is reccomended to create a python [`virtual environment`](https://docs.python.org/3/library/venv.html) for such applications
+
 #### `pip install -r requirements.txt`
 
 run the following command in a terminal to start the back-end:
