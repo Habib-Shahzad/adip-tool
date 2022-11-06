@@ -58,6 +58,6 @@ Configure other views in this file as seen fit.
 
 
 ## Configuring the front-end
-Open the file [`"frontend/index.js"`](frontend/index.js)
+Open the file [`"frontend/src/index.js"`](frontend/src/index.js)
 and configure accordingly.
 
