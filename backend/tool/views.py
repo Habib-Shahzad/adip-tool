@@ -189,19 +189,18 @@ def algorithmic_tools_view(request):
     result = np.where(empty_canvas == 255)
     listOfCoordinates= list(zip(result[0], result[1]))
 
+    # print(listOfCoordinates)
+
     white_image = np.zeros((image.shape[0], image.shape[1], 3), np.uint8)
 
     output_image = white_image
 
     if radio_value == '1':
-        output_image = main_CLAHE(image)
-
-    if radio_value == '2':
-        output_image = main_LabCC(image)
+        image = main_CLAHE(image, listOfCoordinates)
 
 
-    for x, y in listOfCoordinates:
-        image[x, y] = output_image[x, y]
+    # for x, y in listOfCoordinates:
+    #     image[x, y] = output_image[x, y]
 
 
     _, imdata = cv2.imencode('.JPG', image)
