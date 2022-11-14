@@ -76,7 +76,7 @@ const AlgorithmTools = () => {
     const [radioValue, setRadioValue] = useState('1');
 
     const radios = [
-        { name: 'CLHE', value: '1' },
+        { name: 'CLAHE', value: '1' },
         { name: 'Lab Color Correction', value: '2' },
     ];
 

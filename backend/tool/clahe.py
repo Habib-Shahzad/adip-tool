@@ -17,7 +17,7 @@ def redistribute(hist, clip_limit):
         else:
             bottom = middle
 
-    return (S/len(hist))/bottom
+    return (S/len(hist))+bottom
 
 
 def clahe_cdf(Iay):
@@ -68,10 +68,10 @@ def main_CLAHE(input_img, lst):
     rgbImage = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
     [y, cr, cb] = cv2.split(cv2.cvtColor(rgbImage, cv2.COLOR_RGB2YCR_CB))
     new_y = cv2.copyMakeBorder(y, 8, 8, 8, 8, cv2.BORDER_REFLECT)
-    clahe = new_y
+    clahe = np.float32(new_y)
 
     for i in lst:
-        region = new_y[i[0]:i[0]+16, i[1]:i[1]+16]
+        region = new_y[i[0]:i[0]+8, i[1]:i[1]+8]
         cdf = clahe_cdf(region)
         clahe[i[0], i[1]] = cdf[new_y[i[0], i[1]]]*255
 
