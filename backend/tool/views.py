@@ -1,7 +1,7 @@
 # from django.shortcuts import render
 # from rest_framework import viewsets
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 import cv2
 import numpy as np
@@ -158,9 +158,9 @@ def brush_view(request):
     image = input_image
 
     result = np.where(empty_canvas == 255)
-    listOfCoordinates= list(zip(result[0], result[1]))
+    brushed_coordinates = list(zip(result[0], result[1]))
 
-    for x,y in listOfCoordinates:
+    for x,y in brushed_coordinates :
         r,_,_ = image[x,y]
         image[x,y] = np.array([r,r,r])
 
@@ -172,7 +172,7 @@ def brush_view(request):
 
 
 @csrf_exempt
-def algorithmic_tools_view(request):
+def algorithmic_tools_view(request: HttpRequest):
 
     empty_canvas = request.FILES['upload']
     input_image = request.FILES['input']
@@ -187,21 +187,22 @@ def algorithmic_tools_view(request):
     image = input_image
 
     result = np.where(empty_canvas == 255)
-    listOfCoordinates= list(zip(result[0], result[1]))
 
-    # print(listOfCoordinates)
+    brushed_coordinates = np.array(list(zip(result[0], result[1])))
+    
+    coordinates_cookie = request.COOKIES.get('computed_coordinates')
+    intersected_coordinates = brushed_coordinates
 
-    white_image = np.zeros((image.shape[0], image.shape[1], 3), np.uint8)
-
-    output_image = white_image
+    if coordinates_cookie is not None:
+        computed_coordinates = json.loads(coordinates_cookie)
+        intersected_coordinates = np.intersect1d(brushed_coordinates, computed_coordinates)
 
     if radio_value == '1':
-        image = main_CLAHE(image, listOfCoordinates)
+        image = main_CLAHE(image, intersected_coordinates)
 
-
-    # for x, y in listOfCoordinates:
-    #     image[x, y] = output_image[x, y]
-
+    stringified = np.array2string(intersected_coordinates, separator=',')
+    response = HttpResponse('hello')
+    response.set_cookie('computed_coordinates', stringified)
 
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})

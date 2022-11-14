@@ -1,5 +1,12 @@
 import numpy as np
 import cv2
+import multiprocessing
+   
+  
+
+
+
+
 
 def redistribute(hist, clip_limit):
 
@@ -63,6 +70,10 @@ def clahe_cdf(Iay):
     return cdfy
 
 
+def calc_cdf(region):
+    return clahe_cdf(region)
+
+
 def main_CLAHE(input_img, lst):
 
     rgbImage = cv2.cvtColor(input_img, cv2.COLOR_BGR2RGB)
@@ -70,10 +81,13 @@ def main_CLAHE(input_img, lst):
     new_y = cv2.copyMakeBorder(y, 8, 8, 8, 8, cv2.BORDER_REFLECT)
     clahe = np.float32(new_y)
 
-    for i in lst:
-        region = new_y[i[0]:i[0]+8, i[1]:i[1]+8]
-        cdf = clahe_cdf(region)
-        clahe[i[0], i[1]] = cdf[new_y[i[0], i[1]]]*255
+    pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool(processes=30)
+    regions = [new_y[i[0]:i[0]+8, i[1]:i[1]+8] for i in lst]
+    cdfs = pool.map(calc_cdf, regions)
+
+    for index, i in enumerate(lst):
+        clahe[i[0], i[1]] = cdfs[index][new_y[i[0], i[1]]]*255
 
     clahe = clahe[8:clahe.shape[0]-8, 8:clahe.shape[1]-8]
     clahe = cv2.cvtColor(
