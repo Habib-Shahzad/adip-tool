@@ -199,6 +199,8 @@ def algorithmic_tools_view(request: HttpRequest):
 
     if radio_value == '1':
         image = main_CLAHE(image, intersected_coordinates)
+    if radio_value == '2':
+        image = main_LabCC(image, intersected_coordinates)
 
     stringified = np.array2string(intersected_coordinates, separator=',')
     response = HttpResponse('hello')

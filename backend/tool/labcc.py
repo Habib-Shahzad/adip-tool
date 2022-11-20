@@ -1,74 +1,53 @@
 import numpy as np
 import cv2
+import numpy.linalg as lin
 
-# Code from: https://lindevs.com/apply-gamma-correction-to-an-image-using-opencv#:~:text=Gamma%20correction%20can%20be%20implemented,performs%20a%20lookup%20table%20transform.
-def gammaCorrection(src, gamma):
-    invGamma = 1 / gamma
+def main_LabCC(input_image, lst):
 
-    table = [((i / 255) ** invGamma) * 255 for i in range(256)]
-    table = np.array(table, np.uint8)
+    rgb_to_lms = np.array((np.array((0.3811, 0.5783, 0.0402)), np.array(
+            (0.1967, 0.7244, 0.0782)), np.array((0.0241, 0.1288, 0.8444))))
 
-    return cv2.LUT(src, table)
+    loglms_to_lab = np.matmul(np.array((np.array(((1/np.sqrt(3)), 0, 0)), np.array((0, (1/np.sqrt(6)), 0)),
+                                        np.array((0, 0, (1/np.sqrt(2)))))), np.array((np.array((1, 1, 1)), np.array((1, 1, -2)), np.array((1, -1, 0)))))
 
-# https://itecnote.com/tecnote/python-how-to-convert-from-srgb-to-linear-srgb-for-computing-the-color-correction-matrix-in-opencv-ccm/
-def srgb_to_linsrgb (srgb):
-    """Convert sRGB values to physically linear ones. The transformation is
-       uniform in RGB, so *srgb* can be of any shape.
+    lab_to_lms = np.matmul(np.array((np.array((1, 1, 1)), np.array((1, 1, -1)), np.array((1, -2, 0)))),
+                            np.array((np.array(((np.sqrt(3)/3), 0, 0)), np.array((0, (np.sqrt(6)/6), 0)),
+                                        np.array((0, 0, (np.sqrt(2)/2))))))
 
-       *srgb* values should range between 0 and 1, inclusively.
-
-    """
-    gamma = ((srgb + 0.055) / 1.055)**2.4
-    scale = srgb / 12.92
-    return np.where (srgb > 0.04045, gamma, scale)
-
-
-def main_LabCC(input_image):
-
-    img = input_image
+    lms_to_rgb = np.array((np.array((4.4679, -3.5873, 0.1193)), np.array(
+        (-1.2186, 2.3809, -0.1624)), np.array((0.0497, -0.2439, 1.2045))))
 
     img = cv2.cvtColor(input_image, cv2.COLOR_BGR2RGB)
+    img = cv2.normalize(img, None, alpha=0.00001, beta=1,
+                        norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
 
-    img = cv2.normalize(img,
-                        None,
-                        alpha=0,
-                        beta=1,
-                        norm_type=cv2.NORM_MINMAX,
-                        dtype=cv2.CV_32F)
-    img = srgb_to_linsrgb(img)
-    img = cv2.normalize(img,
-                        None,
-                        alpha=0,
-                        beta=255,
-                        norm_type=cv2.NORM_MINMAX,
-                        dtype=cv2.CV_8U)
-    # img = gammaCorrection(img, 2.2)
+    new_img = np.zeros(img.shape)
+    points = []
+    for i in lst:
+        pixel = img[i[0]][i[1]]
+        pixel = np.dot(rgb_to_lms, pixel)
+        pixel = np.log(pixel)
+        pixel = np.dot(loglms_to_lab, pixel)
+        points.append([pixel[0], pixel[1], pixel[2]])
+        new_img[i[0]][i[1]] = [pixel[0], pixel[1], pixel[2]]
 
-    [rows, columns, channels] = img.shape
+    mean_val = np.array([points]).mean(axis=1)[0]
 
-    rgb_to_xyz = np.array((np.array(
-        (0.5141, 0.3239, 0.1604)), np.array(
-            (0.2651, 0.6702, 0.0641)), np.array((0.0241, 0.1228, 0.8444))))
-    xyz_to_lms = np.array((np.array(
-        (0.3897, 0.6890, 0.0787)), np.array(
-            (-0.2298, 1.1834, 0.0464)), np.array((0.0000, 0.0000, 1.0000))))
-    loglms_to_lab = np.dot(
-        np.array((np.array(
-            ((1 / np.sqrt(3)), 0, 0)), np.array(
-                (0, (1 / np.sqrt(6)), 0)), np.array(
-                    (0, 0, (1 / np.sqrt(2)))))),
-        np.array((np.array((1, 1, 1)), np.array(
-            (1, 1, -2)), np.array((1, -1, 0)))))
 
-    for i in range(rows):
-        for j in range(columns):
-            pixel = np.float32(img[i][j])
-            pixel = np.dot(rgb_to_xyz * xyz_to_lms, pixel)
-            gray_world = pixel / np.mean(pixel)
-            pixel = np.dot(loglms_to_lab, np.log(pixel) - np.log(gray_world))
-            pixel -= np.mean(pixel)
-            img[i][j] = pixel * 255
+    for i in lst:
 
-    img = cv2.cvtColor(img, cv2.COLOR_LAB2RGB)
+        pixel = new_img[i[0]][i[1]]
 
+        pixel[1] -= mean_val[1]*0.8
+        pixel[2] -= mean_val[2]*0.8
+
+        pixel = np.dot(lab_to_lms, pixel)
+        pixel = np.exp(pixel)
+        pixel = np.dot(lms_to_rgb, pixel)
+        img[i[0]][i[1]] = [pixel[0], pixel[1], pixel[2]]
+
+    img = cv2.normalize(img, None, alpha=0, beta=255,
+                        norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return img
+
