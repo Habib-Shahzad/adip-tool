@@ -16,6 +16,7 @@ def threshold_image(image):
     _, thresh = cv2.threshold(img_gray, 150, 255, cv2.THRESH_BINARY)
     return thresh
 
+
 def draw_image_contours_using_opencv(image):
     '''
     REFERENCED FROM:
@@ -34,11 +35,12 @@ def draw_image_contours_using_opencv(image):
                      lineType=cv2.LINE_AA)
     return image_copy
 
+
 @csrf_exempt
 def basic_tools_view(request):
     f = request.FILES['upload']
     myfile = f.read()
-    image = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_COLOR)
+    image = cv2.imdecode(np.frombuffer(myfile, np.uint8), cv2.IMREAD_COLOR)
 
     radioValue = int(request.POST['radioValue'])
     if radioValue == 1:
@@ -53,17 +55,18 @@ def basic_tools_view(request):
     return JsonResponse(jstr, safe=False)
 
 
-
 @csrf_exempt
 def compute_inv_fft(request):
     f = request.FILES['upload']
     f2 = request.FILES['input']
 
     myfile = f.read()
-    f_normalized = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_GRAYSCALE)
+    f_normalized = cv2.imdecode(np.frombuffer(myfile, np.uint8),
+                                cv2.IMREAD_GRAYSCALE)
 
     input_image = f2.read()
-    input_image = cv2.imdecode(np.frombuffer(input_image , np.uint8), cv2.IMREAD_COLOR)
+    input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
+                               cv2.IMREAD_COLOR)
 
     ycrcb_image = cv2.cvtColor(input_image, cv2.COLOR_BGR2YCrCb)
     y_channel = ycrcb_image[:, :, 0]
@@ -76,15 +79,15 @@ def compute_inv_fft(request):
 
     H = f.shape[0]
     W = f.shape[1]
-    hW = int (W/2)
-    hH = int (H/2)
+    hW = int(W / 2)
+    hH = int(H / 2)
 
     for i in range(H):
         for j in (range(W)):
             L = f_normalized[i, j]
-            x,y = 0,0
+            x, y = 0, 0
 
-            if(j>=0 and j<hW and i>=0 and i<hH):
+            if (j >= 0 and j < hW and i >= 0 and i < hH):
                 x = j + hW
                 y = i + hH
             #Quadrant 1 values mapped to Quadrant 2
@@ -103,22 +106,23 @@ def compute_inv_fft(request):
                 y = i - hH
 
             if (L == 0):
-                f[y,x] = 0+0j
+                f[y, x] = 0 + 0j
 
     fshift = np.fft.fftshift(f)
     inverse = np.fft.ifft2(fshift)
     inverse_normalized = np.abs(inverse)
 
-    merged = cv2.merge([inverse_normalized.astype(np.uint8), cr_channel, cb_channel])
+    merged = cv2.merge(
+        [inverse_normalized.astype(np.uint8), cr_channel, cb_channel])
     image = cv2.cvtColor(merged, cv2.COLOR_YCrCb2BGR)
 
-    _, imdata = cv2.imencode('.JPG', image )
+    _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
     return JsonResponse(jstr, safe=False)
 
+
 @csrf_exempt
 def compute_fft(request):
-
     def FFTPlot(Output: np.ndarray):
         FourierMagnitude = np.abs(Output)
         FFTLog = np.log(1 + FourierMagnitude)
@@ -128,7 +132,7 @@ def compute_fft(request):
 
     f = request.FILES['upload']
     myfile = f.read()
-    image = cv2.imdecode(np.frombuffer(myfile , np.uint8), cv2.IMREAD_COLOR)
+    image = cv2.imdecode(np.frombuffer(myfile, np.uint8), cv2.IMREAD_COLOR)
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     f = np.fft.fft2(image)
@@ -137,11 +141,8 @@ def compute_fft(request):
     spectrum = FFTPlot(fshift)
     _, imdata = cv2.imencode('.JPG', spectrum)
 
-    jstr = json.dumps({
-        "image": base64.b64encode(imdata).decode('ascii')
-        })
+    jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
     return JsonResponse(jstr, safe=False)
-
 
 
 @csrf_exempt
@@ -152,24 +153,36 @@ def brush_view(request):
     input_image = input_image.read()
     empty_canvas = empty_canvas.read()
 
-    input_image = cv2.imdecode(np.frombuffer(input_image , np.uint8), cv2.IMREAD_COLOR)
-    empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas , np.uint8), cv2.IMREAD_GRAYSCALE)
+    input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
+                               cv2.IMREAD_COLOR)
+    empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas, np.uint8),
+                                cv2.IMREAD_GRAYSCALE)
 
     image = input_image
 
     result = np.where(empty_canvas == 255)
     brushed_coordinates = list(zip(result[0], result[1]))
 
-    for x,y in brushed_coordinates :
-        r,_,_ = image[x,y]
-        image[x,y] = np.array([r,r,r])
-
+    for x, y in brushed_coordinates:
+        r, _, _ = image[x, y]
+        image[x, y] = np.array([r, r, r])
 
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
     return JsonResponse(jstr, safe=False)
 
 
+
+def set_diff2d(a1: np.ndarray, a2: np.ndarray) -> np.ndarray:
+    a1_rows = a1.view([('', a1.dtype)] * a1.shape[1])
+    a2_rows = a2.view([('', a2.dtype)] * a2.shape[1])
+    return np.setdiff1d(a1_rows, a2_rows).view(a1.dtype).reshape(-1, a1.shape[1])
+
+
+def reset_canvas(request: HttpRequest):
+    request.session['coords_x'] = json.dumps([])
+    request.session['coords_y'] = json.dumps([])
+    return JsonResponse({'status': 'ok'})
 
 @csrf_exempt
 def algorithmic_tools_view(request: HttpRequest):
@@ -181,30 +194,51 @@ def algorithmic_tools_view(request: HttpRequest):
     input_image = input_image.read()
     empty_canvas = empty_canvas.read()
 
-    input_image = cv2.imdecode(np.frombuffer(input_image , np.uint8), cv2.IMREAD_COLOR)
-    empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas , np.uint8), cv2.IMREAD_GRAYSCALE)
+    input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
+                               cv2.IMREAD_COLOR)
+    empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas, np.uint8),
+                                cv2.IMREAD_GRAYSCALE)
 
     image = input_image
 
     result = np.where(empty_canvas == 255)
 
     brushed_coordinates = np.array(list(zip(result[0], result[1])))
-    
-    coordinates_cookie = request.COOKIES.get('computed_coordinates')
-    intersected_coordinates = brushed_coordinates
 
-    if coordinates_cookie is not None:
-        computed_coordinates = json.loads(coordinates_cookie)
-        intersected_coordinates = np.intersect1d(brushed_coordinates, computed_coordinates)
+    if len(brushed_coordinates) > 0:
 
-    if radio_value == '1':
-        image = main_CLAHE(image, intersected_coordinates)
-    if radio_value == '2':
-        image = main_LabCC(image, intersected_coordinates)
+        computed_coords_x = request.session.get('coords_x', "[]")
+        computed_coords_y = request.session.get('coords_y', "[]")
 
-    stringified = np.array2string(intersected_coordinates, separator=',')
-    response = HttpResponse('hello')
-    response.set_cookie('computed_coordinates', stringified)
+        computed_coords_x = json.loads(computed_coords_x)
+        computed_coords_y = json.loads(computed_coords_y)
+
+        computed_coordinates = np.array(list(zip(computed_coords_x, computed_coords_y)))
+
+        non_computed_coordinates = brushed_coordinates
+        if computed_coordinates.size != 0:
+            non_computed_coordinates = set_diff2d(brushed_coordinates, computed_coordinates)
+
+        if radio_value == '1':
+            image = main_CLAHE(image, non_computed_coordinates)
+        if radio_value == '2':
+            image = main_LabCC(image, non_computed_coordinates)
+
+        if computed_coordinates.size != 0:
+            computed_coordinates = np.concatenate((computed_coordinates, non_computed_coordinates))
+        else:
+            computed_coordinates = non_computed_coordinates
+        
+        coordinates_x = computed_coordinates[:, 0]
+        coordinates_y = computed_coordinates[:, 1]
+
+        stringified_coords_x = json.dumps(coordinates_x.tolist())
+        request.session['coords_x'] = stringified_coords_x
+
+        stringified_coords_y = json.dumps(coordinates_y.tolist())
+        request.session['coords_y'] = stringified_coords_y
+
+        request.session.modified = True
 
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})

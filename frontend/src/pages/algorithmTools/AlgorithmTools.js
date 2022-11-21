@@ -10,6 +10,10 @@ import { BouncyText } from "../../components";
 const APP_URL = "http://localhost:8000";
 // const APP_URL = "https://adip-tool.herokuapp.com";
 
+axios.defaults.xsrfCookieName = 'XSRF-TOKEN'
+axios.defaults.xsrfHeaderName = "X-XSRF-TOKEN"
+axios.defaults.withCredentials = true;
+axios.defaults.accessControlAllowOrigin = "*"
 
 const AlgorithmTools = () => {
 
@@ -18,6 +22,7 @@ const AlgorithmTools = () => {
     const [fileUrl, setFileUrl] = useState(null);
     const [inputLoaded, setInputLoaded] = useState(false);
     const [inputDataUrl, setInputDataUrl] = useState(null);
+    const [outputDataUrl, setOutputDataUrl] = useState(null);
 
 
     function drawImageScaled(img, ctx) {
@@ -48,6 +53,7 @@ const AlgorithmTools = () => {
         reader.readAsDataURL(file);
         reader.onloadend = () => {
             setInputDataUrl(reader.result);
+            setOutputDataUrl(reader.result);
         }
 
         const canvas = document.getElementById("algorithmic-input-canvas");
@@ -136,11 +142,12 @@ const AlgorithmTools = () => {
             drawImageScaled(croppedImage, bufferCanvas.getContext("2d"));
 
             const inputImageFile = document.getElementById('fileInput').files[0];
+            const outputImageFile = dataURLtoFile(outputDataUrl, inputImageFile.name);
 
             var formData = new FormData();
 
             formData.append("upload", dataURLtoFile(bufferCanvas.toDataURL(), "image.png"));
-            formData.append("input", inputImageFile);
+            formData.append("input", outputImageFile);
             formData.append("radioValue", radioValue);
 
 
@@ -156,6 +163,8 @@ const AlgorithmTools = () => {
 
             let outputImage = new Image();
             outputImage.src = newSrc;
+
+            setOutputDataUrl(newSrc);
 
             const outputCanvas = document.getElementById("algorithmic-output-canvas");
 
@@ -181,10 +190,17 @@ const AlgorithmTools = () => {
     };
 
 
-    const resetCanvas = () => {
+    const resetCanvas = async () => {
+
+        setLoading(true);
+
         const canvas = document.getElementById("algorithmic-input-canvas");
         const ctx = canvas.getContext("2d");
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        await axios.get(`${APP_URL}/api/reset-canvas/`);
+
+        setOutputDataUrl(inputDataUrl);        
 
         const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
@@ -203,6 +219,8 @@ const AlgorithmTools = () => {
         image.onload = function () {
             drawImageScaled(image, ctx);
         }
+
+        setLoading(false);
     }
 
 

@@ -24,15 +24,20 @@ SECRET_KEY = 'django-insecure-=69mmssfkc+^3tc%d#u9ht)g&#j$i==s)lws-igz0y#y+4lvf!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin', 'django.contrib.auth',
-    'django.contrib.contenttypes', 'django.contrib.sessions',
-    'django.contrib.messages', 'django.contrib.staticfiles', 'corsheaders',
-    'rest_framework', 'tool'
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'corsheaders',
+    'rest_framework',
+    'tool',
 ]
 
 MIDDLEWARE = [
@@ -44,19 +49,15 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-
 ]
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10242880  # 10MB
 
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10242880 # 10MB
-
+CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_ALLOW_ALL = True
 CSRF_TRUSTED_ORIGINS = ['https://*.127.0.0.1', "http://localhost:3000"]
 
-
-CORS_ORIGIN_WHITELIST = [
-     'http://localhost:3000'
-]
+CORS_ORIGIN_WHITELIST = ['http://localhost:3000']
 
 ROOT_URLCONF = 'backend.urls'
 
@@ -109,6 +110,10 @@ AUTH_PASSWORD_VALIDATORS = [
         'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
+CSRF_COOKIE_NAME = 'XSRF-TOKEN'
+CSRF_HEADER_NAME = 'HTTP_X_XSRF_TOKEN'
+SESSION_SAVE_EVERY_REQUEST = True
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.0/topics/i18n/
