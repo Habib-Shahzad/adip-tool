@@ -174,12 +174,18 @@ def brush_view(request):
 
 
 def set_diff2d(a1: np.ndarray, a2: np.ndarray) -> np.ndarray:
+    '''
+    Calculate the difference between two 2D arrays.
+    '''
     a1_rows = a1.view([('', a1.dtype)] * a1.shape[1])
     a2_rows = a2.view([('', a2.dtype)] * a2.shape[1])
     return np.setdiff1d(a1_rows, a2_rows).view(a1.dtype).reshape(-1, a1.shape[1])
 
 
 def reset_canvas(request: HttpRequest):
+    '''
+    Clear the session canvas.
+    '''
     request.session['coords_x'] = json.dumps([])
     request.session['coords_y'] = json.dumps([])
     return JsonResponse({'status': 'ok'})
@@ -187,57 +193,59 @@ def reset_canvas(request: HttpRequest):
 @csrf_exempt
 def algorithmic_tools_view(request: HttpRequest):
 
+    # Drawing canvas
     empty_canvas = request.FILES['upload']
-    input_image = request.FILES['input']
-    radio_value = request.POST.get('radioValue')
-
-    input_image = input_image.read()
     empty_canvas = empty_canvas.read()
-
-    input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
-                               cv2.IMREAD_COLOR)
     empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas, np.uint8),
                                 cv2.IMREAD_GRAYSCALE)
+    # Input image
+    input_image = request.FILES['input']
+    input_image = input_image.read()
+    input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
+                               cv2.IMREAD_COLOR)
+    # Radio button value
+    radio_value = request.POST.get('radioValue')
 
     image = input_image
 
+    # extract the x and y coordinates of the brush strokes
     result = np.where(empty_canvas == 255)
-
     brushed_coordinates = np.array(list(zip(result[0], result[1])))
 
-    if len(brushed_coordinates) > 0:
 
+    if len(brushed_coordinates) > 0:
+        
+        # get the coordinates of the brush strokes from the session
         computed_coords_x = request.session.get('coords_x', "[]")
         computed_coords_y = request.session.get('coords_y', "[]")
-
         computed_coords_x = json.loads(computed_coords_x)
         computed_coords_y = json.loads(computed_coords_y)
-
         computed_coordinates = np.array(list(zip(computed_coords_x, computed_coords_y)))
 
+        # calculate the difference between the brush strokes and the session coordinates
         non_computed_coordinates = brushed_coordinates
         if computed_coordinates.size != 0:
             non_computed_coordinates = set_diff2d(brushed_coordinates, computed_coordinates)
 
+        # apply the algorithm to the non-computed coordinates
         if radio_value == '1':
             image = main_CLAHE(image, non_computed_coordinates)
         if radio_value == '2':
             image = main_LabCC(image, non_computed_coordinates)
 
+        # update the session coordinates
         if computed_coordinates.size != 0:
             computed_coordinates = np.concatenate((computed_coordinates, non_computed_coordinates))
         else:
             computed_coordinates = non_computed_coordinates
         
+        # save the session coordinates
         coordinates_x = computed_coordinates[:, 0]
         coordinates_y = computed_coordinates[:, 1]
-
         stringified_coords_x = json.dumps(coordinates_x.tolist())
         request.session['coords_x'] = stringified_coords_x
-
         stringified_coords_y = json.dumps(coordinates_y.tolist())
         request.session['coords_y'] = stringified_coords_y
-
         request.session.modified = True
 
     _, imdata = cv2.imencode('.JPG', image)
