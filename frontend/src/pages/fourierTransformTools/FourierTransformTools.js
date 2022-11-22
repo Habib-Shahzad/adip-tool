@@ -1,7 +1,7 @@
 
 
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Row, Col, Container, Button, Spinner, Form } from "react-bootstrap";
 import './FourierTransformTools.css';
@@ -16,6 +16,7 @@ const FourierTransform = () => {
     const [fileUrl, setFileUrl] = useState(null);
     const [inputLoaded, setInputLoaded] = useState(false);
     const [inputDataUrl, setInputDataUrl] = useState(null);
+    const [outputDataUrl, setOutputDataUrl] = useState(null);
 
     const [isDrawing, setIsDrawing] = useState(false);
     const [markerSize, setMarkerSize] = useState(25);
@@ -23,6 +24,16 @@ const FourierTransform = () => {
     const [outputProcessed, setOutputProcessed] = useState(null);
     const [loading, setLoading] = useState(false);
     const [fftLoading, setFftLoading] = useState(false);
+
+
+    useEffect(() => {
+        setLoading(true);
+        (async () => {
+            await axios.get(`${APP_URL}/api/reset-canvas/`);
+        })();
+        setLoading(false);
+    }, [])
+
 
     function drawImageScaled(img, ctx) {
         var canvas = ctx.canvas;
@@ -47,6 +58,7 @@ const FourierTransform = () => {
         reader.readAsDataURL(file);
         reader.onloadend = () => {
             setInputDataUrl(reader.result);
+            setOutputDataUrl(reader.result);
         }
 
         const canvas = document.getElementById("fourier-input-canvas");
@@ -144,6 +156,8 @@ const FourierTransform = () => {
         const fourierCanvas = document.getElementById("fourier-canvas");
         const fourierCtx = fourierCanvas.getContext("2d");
         var inputImageFile = document.getElementById('fileInput').files[0];
+        const outputImageFile = dataURLtoFile(outputDataUrl, inputImageFile.name);
+        
 
         // create input image
         const inputImageElement = document.getElementById('image-input');
@@ -168,7 +182,7 @@ const FourierTransform = () => {
             // send the input image and the fft image to the backend
             var formData = new FormData();
             formData.append("upload", dataURLtoFile(bufferCanvas.toDataURL(), "image.png"));
-            formData.append("input", inputImageFile);
+            formData.append("input", outputImageFile);
 
             // Get the response from the backend
             var response = await axios.post(`${APP_URL}/api/inv-fft/`, formData, {
@@ -189,6 +203,8 @@ const FourierTransform = () => {
             let updatedInputImage = new Image();
             updatedInputImage.src = newSrc;
 
+            setOutputDataUrl(newSrc);
+
             updatedInputImage.onload = () => {
                 inputCtx.clearRect(0, 0, inputCanvas.width, inputCanvas.height);
                 drawImageScaled(updatedInputImage, inputCtx);
@@ -202,6 +218,8 @@ const FourierTransform = () => {
     const computeNormalizedFFT = async () => {
 
         setFftLoading(true);
+
+        setOutputDataUrl(inputDataUrl);
 
         const inputCanvas = document.getElementById("fourier-input-canvas");
 
@@ -243,6 +261,9 @@ const FourierTransform = () => {
             drawImageScaled(outputImge, ctx);
             // ctx.drawImage(outputImge, 0, 0);
         }
+
+
+        await axios.get(`${APP_URL}/api/reset-canvas/`);
 
         // Processing done
         setOutputProcessed(true);

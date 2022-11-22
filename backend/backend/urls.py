@@ -24,7 +24,6 @@ urlpatterns = [
     path('api/algorithmic-tools/', views.algorithmic_tools_view),
     path('api/reset-canvas/', views.reset_canvas),
     path('api/fft/', views.compute_fft),
-    path('api/inv-fft/', views.compute_inv_fft),
+    path('api/inv-fft/', views.compute_inverse_fft),
     path('api/brush-things/', views.brush_view),
-
 ]

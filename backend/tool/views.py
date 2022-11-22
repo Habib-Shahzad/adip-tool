@@ -9,19 +9,18 @@ from .labcc import main_LabCC
 from typing import Callable
 
 
-def threshold_image(image):
-    img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    _, thresh = cv2.threshold(img_gray, 150, 255, cv2.THRESH_BINARY)
-    return thresh
-
-
-def draw_image_contours_using_opencv(image):
+def draw_image_contours_using_opencv(image: np.ndarray):
     '''
     REFERENCED FROM:
     https://learnopencv.com/contour-detection-using-opencv-python-c/
     '''
+    def threshold_image(image):
+        img_gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        _, thresh = cv2.threshold(img_gray, 150, 255, cv2.THRESH_BINARY)
+        return thresh
+
     thresh = threshold_image(image)
-    contours, hierarchy = cv2.findContours(image=thresh,
+    contours, _ = cv2.findContours(image=thresh,
                                            mode=cv2.RETR_TREE,
                                            method=cv2.CHAIN_APPROX_NONE)
     image_copy = image.copy()
@@ -35,9 +34,8 @@ def draw_image_contours_using_opencv(image):
 
 
 @csrf_exempt
-def basic_tools_view(request):
-    f = request.FILES['upload']
-    myfile = f.read()
+def basic_tools_view(request: HttpRequest):
+    myfile = request.FILES['upload'].read()
     image = cv2.imdecode(np.frombuffer(myfile, np.uint8), cv2.IMREAD_COLOR)
 
     radioValue = int(request.POST['radioValue'])
@@ -53,16 +51,60 @@ def basic_tools_view(request):
     return JsonResponse(jstr, safe=False)
 
 
-@csrf_exempt
-def compute_inv_fft(request):
-    f = request.FILES['upload']
-    f2 = request.FILES['input']
+def get_algorithm_coordinates(request: HttpRequest,
+                              brushed_coordinates: np.ndarray, algo: str,):
+    # get the coordinates of the brush strokes from the session
+    computed_coords_x = request.session.get(f'coords_x_{algo}', "[]")
+    computed_coords_y = request.session.get(f'coords_y_{algo}', "[]")
 
-    myfile = f.read()
+    computed_coords_x = json.loads(computed_coords_x)
+    computed_coords_y = json.loads(computed_coords_y)
+    computed_coordinates = np.array(
+        list(zip(computed_coords_x, computed_coords_y)))
+
+    # calculate the difference between the brush strokes and the session coordinates
+    non_computed_coordinates = brushed_coordinates.copy()
+
+    if computed_coordinates.size != 0:
+        non_computed_coordinates = set_diff2d(brushed_coordinates,
+                                              computed_coordinates)
+
+    return computed_coordinates, non_computed_coordinates
+
+
+def store_algorithm_coordinates(request: HttpRequest,
+                                computed_coords: np.ndarray,
+                                non_computed_coords: np.ndarray, algo: str,):
+    # update the session coordinates
+    if computed_coords.size != 0:
+        computed_coords = np.concatenate(
+            (computed_coords, non_computed_coords))
+    else:
+        computed_coords = non_computed_coords
+
+    if computed_coords.size == 0:
+        return
+
+    # save the session coordinates
+    coordinates_x = computed_coords[:, 0]
+    coordinates_y = computed_coords[:, 1]
+    stringified_coords_x = json.dumps(coordinates_x.tolist())
+    request.session[f'coords_x_{algo}'] = stringified_coords_x
+
+    stringified_coords_y = json.dumps(coordinates_y.tolist())
+    request.session[f'coords_y_{algo}'] = stringified_coords_y
+
+    request.session.modified = True
+
+
+@csrf_exempt
+def compute_inverse_fft(request: HttpRequest):
+
+    myfile = request.FILES['upload'].read()
     f_normalized = cv2.imdecode(np.frombuffer(myfile, np.uint8),
                                 cv2.IMREAD_GRAYSCALE)
 
-    input_image = f2.read()
+    input_image = request.FILES['input'].read()
     input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
                                cv2.IMREAD_COLOR)
 
@@ -80,31 +122,35 @@ def compute_inv_fft(request):
     hW = int(W / 2)
     hH = int(H / 2)
 
-    for i in range(H):
-        for j in (range(W)):
-            L = f_normalized[i, j]
-            x, y = 0, 0
+    black_result = np.where(f_normalized == 0)
+    brushed_coordinates = np.array(list(zip(black_result[0], black_result[1])))
 
-            if (j >= 0 and j < hW and i >= 0 and i < hH):
-                x = j + hW
-                y = i + hH
-            #Quadrant 1 values mapped to Quadrant 2
-            if (j >= hW and j < W and i >= 0 and i < hH):
-                x = j - hW
-                y = i + hH
+    computed_coordinates, non_computed_coordinates = get_algorithm_coordinates(
+        request, brushed_coordinates, 'inv_fft')
 
-            #Quadrant 2 values mapped to Quadrant 1
-            if (j >= 0 and j < hW and i >= hH and i < H):
-                x = j + hW
-                y = i - hH
+    for i, j in non_computed_coordinates:
+        x, y = 0, 0
 
-            #Quadrant 3 values mapped to Quadrant 0
-            if (j >= hW and j < W and i >= hH and i < H):
-                x = j - hW
-                y = i - hH
+        if (j >= 0 and j < hW and i >= 0 and i < hH):
+            x = j + hW
+            y = i + hH
 
-            if (L == 0):
-                f[y, x] = 0 + 0j
+        #Quadrant 1 values mapped to Quadrant 2
+        if (j >= hW and j < W and i >= 0 and i < hH):
+            x = j - hW
+            y = i + hH
+
+        #Quadrant 2 values mapped to Quadrant 1
+        if (j >= 0 and j < hW and i >= hH and i < H):
+            x = j + hW
+            y = i - hH
+
+        #Quadrant 3 values mapped to Quadrant 0
+        if (j >= hW and j < W and i >= hH and i < H):
+            x = j - hW
+            y = i - hH
+
+        f[y, x] = 0 + 0j
 
     fshift = np.fft.fftshift(f)
     inverse = np.fft.ifft2(fshift)
@@ -114,13 +160,16 @@ def compute_inv_fft(request):
         [inverse_normalized.astype(np.uint8), cr_channel, cb_channel])
     image = cv2.cvtColor(merged, cv2.COLOR_YCrCb2BGR)
 
+    store_algorithm_coordinates(request, computed_coordinates,
+                                non_computed_coordinates, 'inv_fft')
+
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
     return JsonResponse(jstr, safe=False)
 
 
 @csrf_exempt
-def compute_fft(request):
+def compute_fft(request: HttpRequest):
     def FFTPlot(Output: np.ndarray):
         FourierMagnitude = np.abs(Output)
         FFTLog = np.log(1 + FourierMagnitude)
@@ -128,8 +177,7 @@ def compute_fft(request):
         FFTNormalized = np.uint8(FFTNormalized)
         return FFTNormalized
 
-    f = request.FILES['upload']
-    myfile = f.read()
+    myfile = request.FILES['upload'].read()
     image = cv2.imdecode(np.frombuffer(myfile, np.uint8), cv2.IMREAD_COLOR)
 
     image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -144,7 +192,7 @@ def compute_fft(request):
 
 
 @csrf_exempt
-def brush_view(request):
+def brush_view(request: HttpRequest):
     empty_canvas = request.FILES['upload']
     input_image = request.FILES['input']
 
@@ -184,59 +232,13 @@ def reset_canvas(request: HttpRequest):
     '''
     Clear the session canvas.
     '''
-
-    algos = ['clahe', 'labcc']
+    algos = ['clahe', 'labcc', 'inv_fft']
 
     for algo in algos:
         request.session[f'coords_x_{algo}'] = json.dumps([])
         request.session[f'coords_y_{algo}'] = json.dumps([])
 
     return JsonResponse({'status': 'ok'})
-
-
-def get_algo_coords(request: HttpRequest, brushed_coordinates: np.ndarray,
-                    algo):
-    # get the coordinates of the brush strokes from the session
-    computed_coords_x = request.session.get(f'coords_x_{algo}', "[]")
-    computed_coords_y = request.session.get(f'coords_y_{algo}', "[]")
-
-    computed_coords_x = json.loads(computed_coords_x)
-    computed_coords_y = json.loads(computed_coords_y)
-    computed_coordinates = np.array(
-        list(zip(computed_coords_x, computed_coords_y)))
-
-    # calculate the difference between the brush strokes and the session coordinates
-    non_computed_coordinates = brushed_coordinates.copy()
-
-    if computed_coordinates.size != 0:
-        non_computed_coordinates = set_diff2d(brushed_coordinates,
-                                              computed_coordinates)
-
-    return computed_coordinates, non_computed_coordinates
-
-
-def store_algo_coords(request: HttpRequest, computed_coords: np.ndarray,
-                      non_computed_coords: np.ndarray, algo):
-    # update the session coordinates
-    if computed_coords.size != 0:
-        computed_coords = np.concatenate(
-            (computed_coords, non_computed_coords))
-    else:
-        computed_coords = non_computed_coords
-
-    if computed_coords.size == 0:
-        return
-
-    # save the session coordinates
-    coordinates_x = computed_coords[:, 0]
-    coordinates_y = computed_coords[:, 1]
-    stringified_coords_x = json.dumps(coordinates_x.tolist())
-    request.session[f'coords_x_{algo}'] = stringified_coords_x
-
-    stringified_coords_y = json.dumps(coordinates_y.tolist())
-    request.session[f'coords_y_{algo}'] = stringified_coords_y
-
-    request.session.modified = True
 
 
 def apply_algo(request: HttpRequest, image, empty_canvas, algo_name, color_val,
@@ -246,13 +248,13 @@ def apply_algo(request: HttpRequest, image, empty_canvas, algo_name, color_val,
     algo_canvas = np.where(empty_canvas == color_val)
     brushed_coordinates = np.array(list(zip(algo_canvas[0], algo_canvas[1])))
 
-    computed_coordinates_clahe, non_computed_coordinates_clahe = get_algo_coords(
+    computed_coordinates_clahe, non_computed_coordinates_clahe = get_algorithm_coordinates(
         request, brushed_coordinates, algo_name)
 
     ## apply the algorithm to the non-computed coordinates
     image = algorithm(image, non_computed_coordinates_clahe)
-    store_algo_coords(request, computed_coordinates_clahe,
-                      non_computed_coordinates_clahe, algo_name)
+    store_algorithm_coordinates(request, computed_coordinates_clahe,
+                                non_computed_coordinates_clahe, algo_name)
 
     return image
 
