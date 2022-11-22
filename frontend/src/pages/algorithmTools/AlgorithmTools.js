@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Row, Col, Container, ToggleButton, ButtonGroup, Button, Spinner, Form } from "react-bootstrap";
 import './AlgorithmTools.css';
@@ -24,6 +24,13 @@ const AlgorithmTools = () => {
     const [inputDataUrl, setInputDataUrl] = useState(null);
     const [outputDataUrl, setOutputDataUrl] = useState(null);
 
+    useEffect(() => {
+        setLoading(true);
+        (async () => {
+            await axios.get(`${APP_URL}/api/reset-canvas/`);
+        })();
+        setLoading(false);
+    }, [])
 
     function drawImageScaled(img, ctx) {
         var canvas = ctx.canvas;
@@ -200,7 +207,7 @@ const AlgorithmTools = () => {
 
         await axios.get(`${APP_URL}/api/reset-canvas/`);
 
-        setOutputDataUrl(inputDataUrl);        
+        setOutputDataUrl(inputDataUrl);
 
         const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
         const hiddenCtx = hiddenCanvas.getContext("2d");
@@ -239,7 +246,13 @@ const AlgorithmTools = () => {
         context.lineTo(x, y);
         context.lineWidth = markerSize;
         context.globalCompositeOperation = 'multiply';
-        context.fillStyle = "#ff0";
+
+        if (radioValue === '1') {
+            context.fillStyle = "rgba(255,255,0,0.5)";
+        }
+        else if (radioValue === '2') {
+            context.fillStyle = "rgba(0,0,255,0.5)";
+        }
 
         context.beginPath();
         context.arc(x, y, markerSize, 0, Math.PI * 2);
@@ -253,6 +266,13 @@ const AlgorithmTools = () => {
         hiddenCtx.lineWidth = markerSize;
         hiddenCtx.strokeStyle = 'rgba(0,0,0,1)';
         hiddenCtx.globalCompositeOperation = 'source-over';
+
+        if (radioValue === '1') {
+            hiddenCtx.fillStyle = "rgb(255,255,255)";
+        }
+        else if (radioValue === '2') {
+            hiddenCtx.fillStyle = "rgb(27,27,27)";
+        }
 
         hiddenCtx.beginPath();
         hiddenCtx.arc(x, y, markerSize, 0, Math.PI * 2);

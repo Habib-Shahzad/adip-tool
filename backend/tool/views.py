@@ -1,7 +1,4 @@
-# from django.shortcuts import render
-# from rest_framework import viewsets
-
-from django.http import JsonResponse, HttpResponse, HttpRequest
+from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 import cv2
 import numpy as np
@@ -9,6 +6,7 @@ import json
 import base64
 from .clahe import main_CLAHE
 from .labcc import main_LabCC
+from typing import Callable
 
 
 def threshold_image(image):
@@ -172,23 +170,92 @@ def brush_view(request):
     return JsonResponse(jstr, safe=False)
 
 
-
 def set_diff2d(a1: np.ndarray, a2: np.ndarray) -> np.ndarray:
     '''
     Calculate the difference between two 2D arrays.
     '''
     a1_rows = a1.view([('', a1.dtype)] * a1.shape[1])
     a2_rows = a2.view([('', a2.dtype)] * a2.shape[1])
-    return np.setdiff1d(a1_rows, a2_rows).view(a1.dtype).reshape(-1, a1.shape[1])
+    return np.setdiff1d(a1_rows,
+                        a2_rows).view(a1.dtype).reshape(-1, a1.shape[1])
 
 
 def reset_canvas(request: HttpRequest):
     '''
     Clear the session canvas.
     '''
-    request.session['coords_x'] = json.dumps([])
-    request.session['coords_y'] = json.dumps([])
+
+    algos = ['clahe', 'labcc']
+
+    for algo in algos:
+        request.session[f'coords_x_{algo}'] = json.dumps([])
+        request.session[f'coords_y_{algo}'] = json.dumps([])
+
     return JsonResponse({'status': 'ok'})
+
+
+def get_algo_coords(request: HttpRequest, brushed_coordinates: np.ndarray,
+                    algo):
+    # get the coordinates of the brush strokes from the session
+    computed_coords_x = request.session.get(f'coords_x_{algo}', "[]")
+    computed_coords_y = request.session.get(f'coords_y_{algo}', "[]")
+
+    computed_coords_x = json.loads(computed_coords_x)
+    computed_coords_y = json.loads(computed_coords_y)
+    computed_coordinates = np.array(
+        list(zip(computed_coords_x, computed_coords_y)))
+
+    # calculate the difference between the brush strokes and the session coordinates
+    non_computed_coordinates = brushed_coordinates.copy()
+
+    if computed_coordinates.size != 0:
+        non_computed_coordinates = set_diff2d(brushed_coordinates,
+                                              computed_coordinates)
+
+    return computed_coordinates, non_computed_coordinates
+
+
+def store_algo_coords(request: HttpRequest, computed_coords: np.ndarray,
+                      non_computed_coords: np.ndarray, algo):
+    # update the session coordinates
+    if computed_coords.size != 0:
+        computed_coords = np.concatenate(
+            (computed_coords, non_computed_coords))
+    else:
+        computed_coords = non_computed_coords
+
+    if computed_coords.size == 0:
+        return
+
+    # save the session coordinates
+    coordinates_x = computed_coords[:, 0]
+    coordinates_y = computed_coords[:, 1]
+    stringified_coords_x = json.dumps(coordinates_x.tolist())
+    request.session[f'coords_x_{algo}'] = stringified_coords_x
+
+    stringified_coords_y = json.dumps(coordinates_y.tolist())
+    request.session[f'coords_y_{algo}'] = stringified_coords_y
+
+    request.session.modified = True
+
+
+def apply_algo(request: HttpRequest, image, empty_canvas, algo_name, color_val,
+               algorithm: Callable):
+
+    # extract the x and y coordinates of the brush strokes of the algorithm
+    algo_canvas = np.where(empty_canvas == color_val)
+    brushed_coordinates = np.array(list(zip(algo_canvas[0], algo_canvas[1])))
+
+    computed_coordinates_clahe, non_computed_coordinates_clahe = get_algo_coords(
+        request, brushed_coordinates, algo_name)
+
+    ## apply the algorithm to the non-computed coordinates
+    image = algorithm(image, non_computed_coordinates_clahe)
+    store_algo_coords(request, computed_coordinates_clahe,
+                      non_computed_coordinates_clahe, algo_name)
+
+    return image
+
 
 @csrf_exempt
 def algorithmic_tools_view(request: HttpRequest):
@@ -203,50 +270,10 @@ def algorithmic_tools_view(request: HttpRequest):
     input_image = input_image.read()
     input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
                                cv2.IMREAD_COLOR)
-    # Radio button value
-    radio_value = request.POST.get('radioValue')
 
     image = input_image
-
-    # extract the x and y coordinates of the brush strokes
-    result = np.where(empty_canvas == 255)
-    brushed_coordinates = np.array(list(zip(result[0], result[1])))
-
-
-    if len(brushed_coordinates) > 0:
-        
-        # get the coordinates of the brush strokes from the session
-        computed_coords_x = request.session.get('coords_x', "[]")
-        computed_coords_y = request.session.get('coords_y', "[]")
-        computed_coords_x = json.loads(computed_coords_x)
-        computed_coords_y = json.loads(computed_coords_y)
-        computed_coordinates = np.array(list(zip(computed_coords_x, computed_coords_y)))
-
-        # calculate the difference between the brush strokes and the session coordinates
-        non_computed_coordinates = brushed_coordinates
-        if computed_coordinates.size != 0:
-            non_computed_coordinates = set_diff2d(brushed_coordinates, computed_coordinates)
-
-        # apply the algorithm to the non-computed coordinates
-        if radio_value == '1':
-            image = main_CLAHE(image, non_computed_coordinates)
-        if radio_value == '2':
-            image = main_LabCC(image, non_computed_coordinates)
-
-        # update the session coordinates
-        if computed_coordinates.size != 0:
-            computed_coordinates = np.concatenate((computed_coordinates, non_computed_coordinates))
-        else:
-            computed_coordinates = non_computed_coordinates
-        
-        # save the session coordinates
-        coordinates_x = computed_coordinates[:, 0]
-        coordinates_y = computed_coordinates[:, 1]
-        stringified_coords_x = json.dumps(coordinates_x.tolist())
-        request.session['coords_x'] = stringified_coords_x
-        stringified_coords_y = json.dumps(coordinates_y.tolist())
-        request.session['coords_y'] = stringified_coords_y
-        request.session.modified = True
+    image = apply_algo(request, image, empty_canvas, 'clahe', 255, main_CLAHE)
+    image = apply_algo(request, image, empty_canvas, 'labcc', 27, main_LabCC)
 
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})
