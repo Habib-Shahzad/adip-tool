@@ -248,13 +248,13 @@ def apply_algo(request: HttpRequest, image, empty_canvas, algo_name, color_val,
     algo_canvas = np.where(empty_canvas == color_val)
     brushed_coordinates = np.array(list(zip(algo_canvas[0], algo_canvas[1])))
 
-    computed_coordinates_clahe, non_computed_coordinates_clahe = get_algorithm_coordinates(
+    computed_coordinates, non_computed_coordinates = get_algorithm_coordinates(
         request, brushed_coordinates, algo_name)
 
     ## apply the algorithm to the non-computed coordinates
-    image = algorithm(image, non_computed_coordinates_clahe)
-    store_algorithm_coordinates(request, computed_coordinates_clahe,
-                                non_computed_coordinates_clahe, algo_name)
+    image = algorithm(image, non_computed_coordinates)
+    store_algorithm_coordinates(request, computed_coordinates,
+                                non_computed_coordinates, algo_name)
 
     return image
 
