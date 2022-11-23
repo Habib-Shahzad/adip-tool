@@ -262,20 +262,25 @@ def apply_algo(request: HttpRequest, image, empty_canvas, algo_name, color_val,
 @csrf_exempt
 def algorithmic_tools_view(request: HttpRequest):
 
-    # Drawing canvas
-    empty_canvas = request.FILES['upload']
-    empty_canvas = empty_canvas.read()
-    empty_canvas = cv2.imdecode(np.frombuffer(empty_canvas, np.uint8),
-                                cv2.IMREAD_GRAYSCALE)
+    # Drawing canvas 1
+    canvas1 = request.FILES['canvas1']
+    canvas1 = canvas1.read()
+    canvas1 = cv2.imdecode(np.frombuffer(canvas1, np.uint8), cv2.IMREAD_GRAYSCALE)
+
+    # Drawing canvas 2
+    canvas2 = request.FILES['canvas2']
+    canvas2 = canvas2.read()
+    canvas2 = cv2.imdecode(np.frombuffer(canvas2, np.uint8), cv2.IMREAD_GRAYSCALE)
+
     # Input image
-    input_image = request.FILES['input']
+    input_image = request.FILES['image']
     input_image = input_image.read()
-    input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8),
-                               cv2.IMREAD_COLOR)
+    input_image = cv2.imdecode(np.frombuffer(input_image, np.uint8), cv2.IMREAD_COLOR)
 
     image = input_image
-    image = apply_algo(request, image, empty_canvas, 'clahe', 255, main_CLAHE)
-    image = apply_algo(request, image, empty_canvas, 'labcc', 27, main_LabCC)
+    image = apply_algo(request, image, canvas2, 'labcc', 255, main_LabCC)
+    image = apply_algo(request, image, canvas1, 'clahe', 255, main_CLAHE)
+
 
     _, imdata = cv2.imencode('.JPG', image)
     jstr = json.dumps({"image": base64.b64encode(imdata).decode('ascii')})

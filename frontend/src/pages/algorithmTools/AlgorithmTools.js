@@ -66,8 +66,11 @@ const AlgorithmTools = () => {
         const canvas = document.getElementById("algorithmic-input-canvas");
         const ctx = canvas.getContext("2d");
 
-        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
-        const hiddenCtx = hiddenCanvas.getContext("2d");
+        const hiddenCanvas1 = document.getElementById("hidden-input-canvas-algo1");
+        const hiddenCtx1 = hiddenCanvas1.getContext("2d");
+
+        const hiddenCanvas2 = document.getElementById("hidden-input-canvas-algo2");
+        const hiddenCtx2 = hiddenCanvas2.getContext("2d");
 
         const img = new Image();
         img.src = imageUrl;
@@ -75,12 +78,17 @@ const AlgorithmTools = () => {
         canvas.height = 1000;
         canvas.width = 1000;
 
-        hiddenCanvas.height = 1000;
-        hiddenCanvas.width = 1000;
+        hiddenCanvas1.height = 1000;
+        hiddenCanvas1.width = 1000;
+
+        hiddenCanvas2.height = 1000;
+        hiddenCanvas2.width = 1000;
 
         img.onload = function () {
             drawImageScaled(img, ctx);
-            hiddenCtx.fillStyle = "white";
+            hiddenCtx1.fillStyle = "white";
+            hiddenCtx2.fillStyle = "white";
+
             setInputLoaded(true);
         }
 
@@ -129,65 +137,68 @@ const AlgorithmTools = () => {
         return cropCanvas(canvas, centerShift_x, centerShift_y, img.width * ratio, img.height * ratio);
     }
 
-    const makeChanges = async () => {
-
-        setLoading(true);
-        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
-        const hiddenCtx = hiddenCanvas.getContext("2d");
+    const getHiddenCanvasFile = async (canvasName) => {
         const inputImageElement = document.getElementById('image-input');
-
+        const hiddenCanvas = document.getElementById(canvasName);
+        const hiddenCtx = hiddenCanvas.getContext("2d");
         const croppedCanvas = cropTheCanvas(hiddenCtx, inputImageElement);
-
         const bufferCanvas = document.createElement('canvas');
         bufferCanvas.width = inputImageElement.width;
         bufferCanvas.height = inputImageElement.height;
-
         const croppedImage = new Image();
         croppedImage.src = croppedCanvas.toDataURL();
+        await croppedImage.decode();
+        drawImageScaled(croppedImage, bufferCanvas.getContext("2d"));
+        return dataURLtoFile(bufferCanvas.toDataURL(), "image.png");
+    }
 
-        croppedImage.onload = async () => {
-            drawImageScaled(croppedImage, bufferCanvas.getContext("2d"));
+    const makeChanges = async () => {
 
-            const inputImageFile = document.getElementById('fileInput').files[0];
-            const outputImageFile = dataURLtoFile(outputDataUrl, inputImageFile.name);
+        setLoading(true);
 
-            var formData = new FormData();
+        const canvas1File = await getHiddenCanvasFile("hidden-input-canvas-algo1");
+        const canvas2File = await getHiddenCanvasFile("hidden-input-canvas-algo2");
 
-            formData.append("upload", dataURLtoFile(bufferCanvas.toDataURL(), "image.png"));
-            formData.append("input", outputImageFile);
-            formData.append("radioValue", radioValue);
+        const inputImageFile = document.getElementById('fileInput').files[0];
+        const outputImageFile = dataURLtoFile(outputDataUrl, inputImageFile.name);
 
+        var formData = new FormData();
 
-            var response = await axios.post(`${APP_URL}/api/algorithmic-tools/`, formData, {
-                headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
-            });
+        formData.append("canvas1", canvas1File);
+        formData.append("canvas2", canvas2File);
 
-            var responseData = JSON.parse(response.data);
-            var myImageData = responseData.image;
-            var newSrc = "data:image/png;base64," + myImageData;
+        formData.append("image", outputImageFile);
+        formData.append("radioValue", radioValue);
 
-            let outputImage = new Image();
-            outputImage.src = newSrc;
-
-            setOutputDataUrl(newSrc);
-
-            const outputCanvas = document.getElementById("algorithmic-output-canvas");
-
-            outputCanvas.width = 1000;
-            outputCanvas.height = 1000;
-
-            outputImage.onload = () => {
-                var outputCtx = outputCanvas.getContext('2d');
-                outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
-                drawImageScaled(outputImage, outputCtx);
+        var response = await axios.post(`${APP_URL}/api/algorithmic-tools/`, formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
             }
+        });
 
-            setLoading(false);
-            setOutputProcessed(true);
+        var responseData = JSON.parse(response.data);
+        var myImageData = responseData.image;
+        var newSrc = "data:image/png;base64," + myImageData;
 
+        let outputImage = new Image();
+        outputImage.src = newSrc;
+
+        setOutputDataUrl(newSrc);
+
+        const outputCanvas = document.getElementById("algorithmic-output-canvas");
+
+        outputCanvas.width = 1000;
+        outputCanvas.height = 1000;
+
+        outputImage.onload = () => {
+            var outputCtx = outputCanvas.getContext('2d');
+            outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+            drawImageScaled(outputImage, outputCtx);
         }
+
+        setLoading(false);
+        setOutputProcessed(true);
+
     }
 
     const hiddenFileInput = React.useRef(null);
@@ -209,7 +220,7 @@ const AlgorithmTools = () => {
 
         setOutputDataUrl(inputDataUrl);
 
-        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
+        const hiddenCanvas = document.getElementById("hidden-input-canvas-algo1");
         const hiddenCtx = hiddenCanvas.getContext("2d");
         hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
 
@@ -239,6 +250,19 @@ const AlgorithmTools = () => {
     }
 
 
+    const hiddenCanvasHighlighter = (canvasName, x, y) => {
+        const hiddenCanvas = document.getElementById(canvasName);
+        const hiddenCtx = hiddenCanvas.getContext("2d");
+        hiddenCtx.lineTo(x, y);
+        hiddenCtx.lineWidth = markerSize;
+        hiddenCtx.strokeStyle = 'rgba(0,0,0,1)';
+        hiddenCtx.globalCompositeOperation = 'source-over';
+        hiddenCtx.fillStyle = "rgb(255,255,255)";
+        hiddenCtx.beginPath();
+        hiddenCtx.arc(x, y, markerSize, 0, Math.PI * 2);
+        hiddenCtx.fill();
+    }
+
     const highlightOnCanvas = (e, canvas, context) => {
 
         const { x, y } = getMouesPosition(e, canvas);
@@ -258,25 +282,13 @@ const AlgorithmTools = () => {
         context.arc(x, y, markerSize, 0, Math.PI * 2);
         context.fill();
 
-        const hiddenCanvas = document.getElementById("hidden-algorithmic-input-canvas");
-        const hiddenCtx = hiddenCanvas.getContext("2d");
-
-
-        hiddenCtx.lineTo(x, y);
-        hiddenCtx.lineWidth = markerSize;
-        hiddenCtx.strokeStyle = 'rgba(0,0,0,1)';
-        hiddenCtx.globalCompositeOperation = 'source-over';
-
-        if (radioValue === '1') {
-            hiddenCtx.fillStyle = "rgb(255,255,255)";
+        if (radioValue === "1") {
+            hiddenCanvasHighlighter("hidden-input-canvas-algo1", x, y);
         }
-        else if (radioValue === '2') {
-            hiddenCtx.fillStyle = "rgb(27,27,27)";
+        else if (radioValue === "2") {
+            hiddenCanvasHighlighter("hidden-input-canvas-algo2", x, y);
         }
 
-        hiddenCtx.beginPath();
-        hiddenCtx.arc(x, y, markerSize, 0, Math.PI * 2);
-        hiddenCtx.fill();
     }
 
 
@@ -436,7 +448,14 @@ const AlgorithmTools = () => {
                             >
 
                                 <canvas
-                                    id='hidden-algorithmic-input-canvas'
+                                    id='hidden-input-canvas-algo1'
+                                    style={{
+                                        display: 'none',
+                                        border: '5px solid white'
+                                    }}
+                                />
+                                <canvas
+                                    id='hidden-input-canvas-algo2'
                                     style={{
                                         display: 'none',
                                         border: '5px solid white'
