@@ -237,7 +237,7 @@ def reset_canvas(request: HttpRequest):
     for algo in algos:
         request.session[f'coords_x_{algo}'] = json.dumps([])
         request.session[f'coords_y_{algo}'] = json.dumps([])
-
+    
     return JsonResponse({'status': 'ok'})
 
 

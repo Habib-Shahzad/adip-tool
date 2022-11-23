@@ -207,30 +207,31 @@ const AlgorithmTools = () => {
         hiddenFileInput.current.click();
     };
 
+    const clearCanvas = (canvasName) => {
+        const canvas = document.getElementById(canvasName);
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
 
     const resetCanvas = async () => {
 
         setLoading(true);
 
-        const canvas = document.getElementById("algorithmic-input-canvas");
-        const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+        clearCanvas("algorithmic-input-canvas");
         await axios.get(`${APP_URL}/api/reset-canvas/`);
-
         setOutputDataUrl(inputDataUrl);
 
-        const hiddenCanvas = document.getElementById("hidden-input-canvas-algo1");
-        const hiddenCtx = hiddenCanvas.getContext("2d");
-        hiddenCtx.clearRect(0, 0, hiddenCanvas.width, hiddenCanvas.height);
-
-        const outputCanvas = document.getElementById("algorithmic-output-canvas");
-        const outputCtx = outputCanvas.getContext("2d");
-        outputCtx.clearRect(0, 0, outputCanvas.width, outputCanvas.height);
+        clearCanvas("hidden-input-canvas-algo1");
+        clearCanvas("hidden-input-canvas-algo2");
+        clearCanvas("algorithmic-output-canvas");
 
         const image = new Image();
         image.src = fileUrl;
 
+        const canvas = document.getElementById("algorithmic-input-canvas");
+        const ctx = canvas.getContext("2d");
+        
         canvas.height = 1000;
         canvas.width = 1000;
 
